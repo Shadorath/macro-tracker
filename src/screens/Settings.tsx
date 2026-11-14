@@ -17,6 +17,7 @@ import { callSheet, errorMessage, setGoals, type DayResponse, type Totals } from
 import { cachedGoals } from '../day';
 import { dateString } from '../dates';
 import { loadTheme, saveTheme, THEMES, type Theme } from '../theme';
+import { debugOn, setDebug } from '../debug';
 import { checkGemini, geminiMessage } from '../gemini';
 
 type Status = { kind: 'idle' | 'busy' | 'ok' | 'error'; text: string };
@@ -217,6 +218,10 @@ export function SettingsScreen({ onClose, onGoalsSaved }: {
           <input id="model" type="text" value={form.model} onInput={update('model')} placeholder={DEFAULT_MODEL} {...plain} />
         </div>
         <p class="hint">If this model is busy or the free limit is reached, the app retries once with {FALLBACK_MODEL}.</p>
+        {/* TEMPORARY: scroll debug readout, remove with src/debug.ts */}
+        <button class="text-btn" onClick={() => setDebug(!debugOn())}>
+          Scroll debug: {debugOn() ? 'on (tap to turn off)' : 'off (tap to turn on)'}
+        </button>
       </details>
 
       <div class="bottom-bar">
