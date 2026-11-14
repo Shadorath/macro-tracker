@@ -160,8 +160,123 @@ details .field { margin-bottom: 8px; }
 }
 
 /* ---------- Status lines ---------- */
-.status { font-size: 14px; margin: 0; line-height: 1.4; }
+.status { font-size: 14px; margin: 0; line-height: 1.4; white-space: pre-line; }
 .status.error { color: var(--error); }
+
+/* Fields where the input sits inside its label */
+.field label { display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- Camera button (Today) ---------- */
+.today { padding-bottom: calc(140px + env(safe-area-inset-bottom)); } /* room for the button */
+.camera {
+  position: fixed;
+  left: 50%;
+  bottom: calc(48px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: 72px;
+  height: 72px;
+  border-radius: 36px;
+  background: var(--ink);
+  color: var(--on-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ---------- Review ---------- */
+.thumb {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 20px;
+  display: block;
+}
+
+/* Calm progress line while Gemini works (not a blocking spinner) */
+.analyzing { display: flex; flex-direction: column; gap: 8px; }
+.progress-line { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.progress-line div {
+  width: 30%;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ink);
+  animation: progress 1.6s ease-in-out infinite;
+}
+@keyframes progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(340%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress-line div { width: 100%; opacity: 0.4; }
+}
+
+.error-block { display: flex; flex-direction: column; gap: 4px; }
+
+.meal-card { gap: 8px; }
+.meal-head { display: flex; align-items: center; gap: 8px; font-size: 17px; }
+.meal-head .text-btn { font-size: 17px; }
+.meal-head .sep { color: var(--quiet); }
+.meal-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.items { display: flex; flex-direction: column; }
+.item { padding: 12px 0; border-bottom: 1px solid var(--divider); display: flex; flex-direction: column; gap: 4px; }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.item-name { min-height: 40px; font-size: 16px; flex: 1; }
+.item-kcal { font-size: 16px; white-space: nowrap; }
+.item-bottom { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.item-pfc { font-size: 13px; color: var(--quiet); display: flex; align-items: center; gap: 8px; }
+
+/* "check" marker for low-confidence estimates */
+.check {
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--track);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+/* − 150 g + */
+.stepper { display: flex; align-items: center; background: var(--track); border-radius: 12px; }
+.stepper button {
+  min-width: 48px;
+  min-height: 48px;
+  text-align: center;
+  font-size: 20px;
+}
+.stepper .grams { min-width: 72px; font-size: 16px; font-weight: 500; }
+
+/* Quick choice chips: ½× 1½× 2×, meal types */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 48px;
+  min-width: 64px;
+  padding: 0 16px;
+  border-radius: 12px;
+  background: var(--track);
+  text-align: center;
+  font-size: 15px;
+}
+.chip.on { background: var(--ink); color: var(--on-ink); }
+
+.inline-editor { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px; }
+.inline-field { display: flex; align-items: flex-end; gap: 12px; }
+.inline-field .field { flex: 1; }
+
+.add-food { display: flex; flex-direction: column; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.row-actions { display: flex; flex-wrap: wrap; gap: 0 24px; }
+
+.meal-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding-top: 8px;
+  border-top: 1px solid var(--divider);
+  font-size: 17px;
+  font-weight: 500;
+}
+.bottom-bar .status { margin-bottom: 8px; }
 
 /* ---------- Motion ---------- */
 @media (prefers-reduced-motion: reduce) {

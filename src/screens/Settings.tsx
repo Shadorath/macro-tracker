@@ -5,9 +5,10 @@
  */
 
 import { useState } from 'preact/hooks';
-import { DEFAULT_MODEL, loadSettings, saveSettings, type Settings } from '../settings';
+import { DEFAULT_MODEL, FALLBACK_MODEL, loadSettings, saveSettings, type Settings } from '../settings';
 import { callSheet, errorMessage, type DayResponse } from '../sheet';
 import { dateString } from '../dates';
+import { checkGemini, geminiMessage } from '../gemini';
 
 type Status = { kind: 'idle' | 'busy' | 'ok' | 'error'; text: string };
 
@@ -35,11 +36,13 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
 
   // Updates one field as you type.
   const update = (key: keyof Settings) => (e: Event) => {
-    setForm({ ...form, [key]: (e.currentTarget as HTMLInputElement).value });
+    const value = (e.currentTarget as HTMLInputElement).value;
+    setForm((prev) => ({ ...prev, [key]: value })); // build on the latest values
     if (status.kind === 'error') setStatus({ kind: 'idle', text: '' });
   };
 
-  // Asks the sheet for today's data using what's typed in the fields (saved or not).
+  // Checks the sheet (asks for today's data) and the Gemini key, using what's
+  // typed in the fields (saved or not). One line of result for each.
   async function testConnection() {
     const f = cleaned(form);
     const problem = checkForm(f);
@@ -49,15 +52,20 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     }
 
     setStatus({ kind: 'busy', text: 'Testing…' });
-    try {
-      const day = await callSheet<DayResponse>(f, 'getDay', { date: dateString() });
-      setStatus({
-        kind: 'ok',
-        text: `Connected. Today: ${day.totals.kcal} of ${day.goals.kcal} kcal eaten.`,
-      });
-    } catch (err) {
-      setStatus({ kind: 'error', text: errorMessage(err) });
-    }
+    const [sheet, gemini] = await Promise.allSettled([
+      callSheet<DayResponse>(f, 'getDay', { date: dateString() }),
+      checkGemini(f.geminiKey, f.model),
+    ]);
+
+    const sheetLine = sheet.status === 'fulfilled'
+      ? `Sheet connected. Today: ${sheet.value.totals.kcal} of ${sheet.value.goals.kcal} kcal eaten.`
+      : errorMessage(sheet.reason);
+    const geminiLine = gemini.status === 'fulfilled'
+      ? `Gemini key works (${f.model}).`
+      : geminiMessage(gemini.reason);
+
+    const allOk = sheet.status === 'fulfilled' && gemini.status === 'fulfilled';
+    setStatus({ kind: allOk ? 'ok' : 'error', text: `${sheetLine}\n${geminiLine}` });
   }
 
   function save() {
@@ -113,7 +121,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           <label for="model">Gemini model</label>
           <input id="model" type="text" value={form.model} onInput={update('model')} placeholder={DEFAULT_MODEL} {...plain} />
         </div>
-        <p class="hint">If the free limit is reached, the app retries once with gemini-3.1-flash-lite.</p>
+        <p class="hint">If this model is busy or the free limit is reached, the app retries once with {FALLBACK_MODEL}.</p>
       </details>
 
       <div class="bottom-bar">

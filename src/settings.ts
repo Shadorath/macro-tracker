@@ -10,7 +10,12 @@ export type Settings = {
   model: string;     // Gemini model ID
 };
 
-export const DEFAULT_MODEL = 'gemini-3.5-flash';
+// gemini-3.5-flash (named in SPEC.md) no longer exists; 3.6-flash is the
+// current stable free Flash model that answered reliably in tests (Nov 2026).
+export const DEFAULT_MODEL = 'gemini-3.6-flash';
+
+// Used once automatically when the main model is rate-limited, busy or slow.
+export const FALLBACK_MODEL = 'gemini-3.1-flash-lite';
 
 const STORAGE_KEY = 'macro-tracker.settings';
 
@@ -19,7 +24,10 @@ const DEFAULTS: Settings = { geminiKey: '', sheetUrl: '', token: '', model: DEFA
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+    const settings: Settings = raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+    // Milestone 2 saved the spec's model name, which Google has since retired.
+    if (settings.model === 'gemini-3.5-flash') settings.model = DEFAULT_MODEL;
+    return settings;
   } catch {
     return { ...DEFAULTS };
   }

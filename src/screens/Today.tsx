@@ -1,16 +1,17 @@
 /**
- * Today screen – placeholder for milestone 2.
- * The real calories card, macros card and camera button arrive in milestone 4.
+ * Today screen – still a placeholder (the calories and macros cards arrive
+ * in milestone 4), now with the camera button.
  */
 
 import { longDate } from '../dates';
 import { hasSheet, loadSettings } from '../settings';
+import { CameraButton } from '../components/CameraButton';
 
-export function TodayScreen({ onOpenSettings }: { onOpenSettings: () => void }) {
+export function TodayScreen({ onOpenSettings, onCamera }: { onOpenSettings: () => void; onCamera: () => void }) {
   const connected = hasSheet(loadSettings());
 
   return (
-    <main class="screen">
+    <main class="screen today">
       <div class="topbar">
         <span>{longDate()}</span>
         <button onClick={onOpenSettings}>Settings</button>
@@ -24,6 +25,8 @@ export function TodayScreen({ onOpenSettings }: { onOpenSettings: () => void }) 
             : 'Open Settings to connect your Google Sheet.'}
         </p>
       </section>
+
+      <CameraButton onClick={onCamera} />
     </main>
   );
 }
