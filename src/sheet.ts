@@ -88,6 +88,45 @@ export async function callSheet<T>(
   return body as T;
 }
 
+// ---------------------------------------------------------------------------
+// The actions the app uses
+// ---------------------------------------------------------------------------
+
+type Conn = Pick<Settings, 'sheetUrl' | 'token'>;
+
+/** Today's (or any day's) meals, totals and goals. */
+export function getDay(settings: Conn, date: string): Promise<DayResponse> {
+  return callSheet<DayResponse>(settings, 'getDay', { date });
+}
+
+/** Saves one meal: one Log row per item. */
+export function addMeal(settings: Conn, meal: Meal): Promise<{ mealId: string }> {
+  return callSheet(settings, 'addMeal', {
+    meal: {
+      id: meal.id,
+      timestamp: meal.timestamp,
+      type: meal.type,
+      name: meal.name,
+      source: meal.source,
+      note: meal.note,
+    },
+    items: meal.items.map((i) => ({
+      name: i.name,
+      grams: i.grams,
+      kcal: i.kcal,
+      protein_g: i.protein_g,
+      fat_g: i.fat_g,
+      carbs_g: i.carbs_g,
+      confidence: i.confidence,
+    })),
+  });
+}
+
+/** Removes all Log rows of one meal. */
+export function deleteMeal(settings: Conn, mealId: string): Promise<{ deleted: number }> {
+  return callSheet(settings, 'deleteMeal', { mealId });
+}
+
 /** Turns any thrown error into one line of text for the screen. */
 export function errorMessage(err: unknown): string {
   if (err instanceof SheetError) return err.message;

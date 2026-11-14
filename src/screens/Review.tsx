@@ -2,9 +2,13 @@
  * Review screen: photo → Gemini estimate → adjust → Save.
  *
  * Layout (SPEC.md): title "Review" with Cancel; photo thumbnail;
- * "Lunch · Chicken rice bowl" (both tappable); item rows with − / + grams;
- * "+ Add food" and "Re-check with a note"; meal total; Save at the bottom.
- * The only ways out are Save and Cancel (or the phone's Back).
+ * "Lunch · 12:35" and the meal name (all tappable); item rows with − / +
+ * grams; "+ Add food" and "Re-check with a note"; meal total; Save at the
+ * bottom. The only ways out are Save and Cancel (or the phone's Back).
+ *
+ * The time defaults to now and can be changed (also to an earlier day) for
+ * meals eaten earlier. Changing it re-guesses the meal type unless you
+ * picked one yourself.
  *
  * Small editors open inline under the thing you tapped (no pop-ups).
  */
@@ -12,6 +16,9 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Photo } from '../photo';
 import type { Settings } from '../settings';
+import type { Meal } from '../sheet';
+import { errorMessage } from '../sheet';
+import { dateString, timestampString } from '../dates';
 import { analyzePhoto, estimateFood, geminiMessage, GeminiError, type GeminiErrorKind } from '../gemini';
 import {
   MEAL_TYPES, mealTypeFor, pfc, toReviewItem, totalsOf, withGrams,
@@ -27,6 +34,7 @@ type Phase =
 type Editor =
   | { kind: 'none' }
   | { kind: 'type' }
+  | { kind: 'time' }
   | { kind: 'mealName' }
   | { kind: 'grams'; id: string }
   | { kind: 'itemName'; id: string }
@@ -40,22 +48,41 @@ type Props = {
   onCancel: () => void;
   onRetake: () => void;
   onOpenSettings: () => void;
+  onSave: (meal: Meal) => Promise<void>; // throws with a one-line message if it fails
 };
 
 const STEP_GRAMS = 10;
 const tick = () => navigator.vibrate?.(10); // short haptic tick
 
-export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, onOpenSettings }: Props) {
+/** "12:35", "Yesterday 21:10" or "12 Nov 21:10". */
+function whenLabel(d: Date): string {
+  const time = timestampString(d).slice(11);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dateString(d) === dateString()) return time;
+  if (dateString(d) === dateString(yesterday)) return `Yesterday ${time}`;
+  return `${d.getDate()} ${d.toLocaleDateString('en-GB', { month: 'short' })} ${time}`;
+}
+
+/** Meal ID from the moment of saving, e.g. m-20261114-123512 (unique per save). */
+function newMealId(): string {
+  return 'm-' + timestampString().replace(/[-:]/g, '').replace(' ', '-') + String(new Date().getSeconds()).padStart(2, '0');
+}
+
+export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, onOpenSettings, onSave }: Props) {
   const [phase, setPhase] = useState<Phase>(() =>
     photoError ? { kind: 'error', message: photoError, errorKind: 'photo' }
     : photo ? { kind: 'analyzing' }
     : { kind: 'ready' });
+  const [mealTime, setMealTime] = useState(() => new Date());
   const [mealType, setMealType] = useState<MealType>(() => mealTypeFor());
+  const [typePicked, setTypePicked] = useState(false); // you chose the type yourself
   const [mealName, setMealName] = useState('');
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [note, setNote] = useState('');          // Gemini's note
   const [editor, setEditor] = useState<Editor>(() => (photo || photoError ? { kind: 'none' } : { kind: 'add' }));
-  const [saveMessage, setSaveMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
 
   // Ask Gemini about the photo. `userNote` comes from "Re-check with a note".
@@ -108,9 +135,49 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
     setEditor({ kind: 'add' });
   };
 
-  function save() {
-    // Saving to the sheet is built in milestone 4.
-    setSaveMessage('Saving to your sheet arrives in the next update.');
+  function changeTime(d: Date) {
+    const now = new Date();
+    const t = d > now ? now : d; // no meals from the future
+    setMealTime(t);
+    if (!typePicked) setMealType(mealTypeFor(t));
+  }
+
+  // Sends the meal to the sheet. On success the app goes back to Today;
+  // on failure everything stays here and a one-line error explains why.
+  async function save() {
+    if (saving || !items.length) return;
+    const timestamp = timestampString(mealTime);
+    const r1 = (v: number) => Math.round(v * 10) / 10;
+    const mealItems = items.map((i) => ({
+      name: i.name,
+      grams: Math.round(i.grams),
+      kcal: Math.round(i.kcal),
+      protein_g: r1(i.protein_g),
+      fat_g: r1(i.fat_g),
+      carbs_g: r1(i.carbs_g),
+      confidence: i.confidence,
+    }));
+    const t = totalsOf(mealItems);
+    const meal: Meal = {
+      id: newMealId(),
+      timestamp,
+      time: timestamp.slice(11),
+      type: mealType,
+      name: mealName.trim() || items.map((i) => i.name).join(', '),
+      source: photo ? 'photo' : 'manual',
+      note,
+      items: mealItems,
+      totals: { kcal: Math.round(t.kcal), protein_g: r1(t.protein_g), fat_g: r1(t.fat_g), carbs_g: r1(t.carbs_g) },
+    };
+
+    setSaving(true);
+    setSaveError('');
+    try {
+      await onSave(meal);
+    } catch (err) {
+      setSaveError(errorMessage(err));
+      setSaving(false);
+    }
   }
 
   const totals = totalsOf(items);
@@ -144,25 +211,32 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
 
       {phase.kind === 'ready' && (
         <section class="card meal-card">
-          {/* "Lunch · Chicken rice bowl" – both parts tappable */}
+          {/* "Lunch · 12:35", then the meal name – all tappable */}
           <div class="meal-head">
             <button class="text-btn" onClick={() => setEditor(editor.kind === 'type' ? { kind: 'none' } : { kind: 'type' })}>
               {mealType}
             </button>
             <span class="sep">·</span>
-            <button class="text-btn meal-name" onClick={() => setEditor({ kind: 'mealName' })}>
-              {mealName || 'Name this meal'}
+            <button class="text-btn" onClick={() => setEditor(editor.kind === 'time' ? { kind: 'none' } : { kind: 'time' })}>
+              {whenLabel(mealTime)}
             </button>
           </div>
+          <button class="text-btn meal-name" onClick={() => setEditor({ kind: 'mealName' })}>
+            {mealName || 'Name this meal'}
+          </button>
 
           {editor.kind === 'type' && (
             <div class="chips">
               {MEAL_TYPES.map((t) => (
-                <button class={`chip${t === mealType ? ' on' : ''}`} onClick={() => { setMealType(t); setEditor({ kind: 'none' }); }}>
+                <button class={`chip${t === mealType ? ' on' : ''}`} onClick={() => { setMealType(t); setTypePicked(true); setEditor({ kind: 'none' }); }}>
                   {t}
                 </button>
               ))}
             </div>
+          )}
+
+          {editor.kind === 'time' && (
+            <TimeEditor value={mealTime} onDone={(d) => { changeTime(d); setEditor({ kind: 'none' }); }} />
           )}
 
           {editor.kind === 'mealName' && (
@@ -215,9 +289,9 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
       )}
 
       <div class="bottom-bar">
-        {saveMessage && <p class="status">{saveMessage}</p>}
-        <button class="btn-primary" onClick={save} disabled={phase.kind !== 'ready' || !items.length}>
-          Save
+        {saveError && <p class="status error" role="alert">{saveError}</p>}
+        <button class="btn-primary" onClick={save} disabled={phase.kind !== 'ready' || !items.length || saving}>
+          {saving ? 'Saving…' : saveError ? 'Retry save' : 'Save'}
         </button>
       </div>
     </main>
@@ -335,6 +409,27 @@ function NumberEditor({ label, value, onDone }: { label: string; value: number; 
         <label>
           {label}
           <input type="number" inputMode="decimal" min="0" value={text} onInput={(e) => setText(e.currentTarget.value)} />
+        </label>
+      </div>
+      <button class="text-btn" type="submit">Done</button>
+    </form>
+  );
+}
+
+/** Date and time picker (the phone's own), for meals eaten earlier. */
+function TimeEditor({ value, onDone }: { value: Date; onDone: (d: Date) => void }) {
+  const toInput = (d: Date) => timestampString(d).replace(' ', 'T'); // "2026-11-14T12:35"
+  const [text, setText] = useState(toInput(value));
+  return (
+    <form class="inline-field" onSubmit={(e) => {
+      e.preventDefault();
+      const d = new Date(text); // read as the phone's local time
+      if (!isNaN(d.getTime())) onDone(d);
+    }}>
+      <div class="field">
+        <label>
+          When did you eat it?
+          <input type="datetime-local" value={text} max={toInput(new Date())} onInput={(e) => setText(e.currentTarget.value)} />
         </label>
       </div>
       <button class="text-btn" type="submit">Done</button>
