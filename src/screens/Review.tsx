@@ -579,10 +579,7 @@ function AddFood({ settings, onAdd, onCancel }: {
       <div class="field">
         <label>
           Food
-          {/* No autoFocus here: when the app opens the keyboard by itself, Chrome
-              on Android ignores the first swipe afterwards (found with a debug
-              readout on the phone). Tapping the field yourself avoids that. */}
-          <input value={f.name} onInput={set('name')} />
+          <input value={f.name} onInput={set('name')} autoFocus />
         </label>
       </div>
       <div class="grid-2">
