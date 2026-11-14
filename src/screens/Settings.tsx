@@ -16,9 +16,7 @@ import { DEFAULT_MODEL, FALLBACK_MODEL, hasSheet, loadSettings, saveSettings, ty
 import { callSheet, errorMessage, setGoals, type DayResponse, type Totals } from '../sheet';
 import { cachedGoals } from '../day';
 import { dateString } from '../dates';
-import { loadTheme, saveTheme, THEMES, type Theme } from '../theme';
-import { debugOn, setDebug } from '../debug';
-import { checkGemini, geminiMessage } from '../gemini';
+import { loadTheme, saveTheme, THEMES, type Theme } from '../theme';import { checkGemini, geminiMessage } from '../gemini';
 
 type Status = { kind: 'idle' | 'busy' | 'ok' | 'error'; text: string };
 
@@ -217,12 +215,7 @@ export function SettingsScreen({ onClose, onGoalsSaved }: {
           <label for="model">Gemini model</label>
           <input id="model" type="text" value={form.model} onInput={update('model')} placeholder={DEFAULT_MODEL} {...plain} />
         </div>
-        <p class="hint">If this model is busy or the free limit is reached, the app retries once with {FALLBACK_MODEL}.</p>
-        {/* TEMPORARY: scroll debug readout, remove with src/debug.ts */}
-        <button class="text-btn" onClick={() => setDebug(!debugOn())}>
-          Scroll debug: {debugOn() ? 'on (tap to turn off)' : 'off (tap to turn on)'}
-        </button>
-      </details>
+        <p class="hint">If this model is busy or the free limit is reached, the app retries once with {FALLBACK_MODEL}.</p>      </details>
 
       <div class="bottom-bar">
         {saveStatus.kind === 'error' && <p class="status error" role="alert">{saveStatus.text}</p>}
