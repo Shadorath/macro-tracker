@@ -6,6 +6,8 @@
  * (history.pushState). Pressing Back removes it and fires "popstate", which
  * sends us back to Today. Moving from one screen to another (e.g. the meals
  * sheet to Review) replaces the entry, so Back still goes straight to Today.
+ * One exception: Past days opened from the meals sheet adds its own entry,
+ * so Back (or its close button) returns to the meals sheet.
  *
  * Today's numbers: shown instantly from the phone's saved copy, then
  * refreshed quietly from the sheet (on open, when returning to Today, and
@@ -78,7 +80,9 @@ export function App() {
   useEffect(() => {
     // Start clean on Today, even if the address had a #screen in it.
     if (location.hash) history.replaceState(null, '', location.pathname);
-    const onBack = () => setScreen('today');
+    // Back lands on the entry below: the meals sheet (if Past days was opened
+    // from it) or Today (no saved screen).
+    const onBack = (e: PopStateEvent) => setScreen(e.state?.screen ?? 'today');
     const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
     window.addEventListener('popstate', onBack);
     document.addEventListener('visibilitychange', onVisible);
@@ -94,7 +98,8 @@ export function App() {
 
   function open(next: Screen) {
     if (screen === next) return;
-    if (screen === 'today') history.pushState({ screen: next }, '', `#${next}`);
+    const stack = screen === 'today' || (screen === 'meals' && next === 'past');
+    if (stack) history.pushState({ screen: next }, '', `#${next}`);
     else history.replaceState({ screen: next }, '', `#${next}`);
     setScreen(next);
   }
