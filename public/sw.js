@@ -14,10 +14,10 @@
  *   "new version?" check, which asks with cache: 'no-store'.
  *
  * Change CACHE when this file, the manifest or an icon changes, so old saved
- * files are cleared (v3: dark manifest colours).
+ * files are cleared (v4: Cyberpunk icon and manifest colours).
  */
 
-const CACHE = 'macro-tracker-v3';
+const CACHE = 'macro-tracker-v4';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const SLOW_MS = 3000;
 

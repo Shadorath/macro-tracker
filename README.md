@@ -14,7 +14,7 @@ No keys or tokens live in this repository. The Gemini API key, Apps Script URL a
 npm install
 npm run dev      # local dev server
 npm run build    # type-check and build into dist/
-npm run icons    # redraw the app icons in public/icons/
+npm run icons    # redraw icon-192/512.png from public/icons/icon.svg (uses Edge)
 ```
 
 Pushing to `main` builds and deploys to GitHub Pages (`.github/workflows/deploy.yml`).

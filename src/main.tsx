@@ -1,7 +1,9 @@
 import { render } from 'preact';
 import { App } from './app';
 import './styles.css';
+import { applyTheme, loadTheme } from './theme';
 
+applyTheme(loadTheme()); // status bar colour for the chosen theme
 render(<App />, document.getElementById('app')!);
 
 // The service worker makes the app installable and lets it open offline.

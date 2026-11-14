@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "powershell -ExecutionPolicy Bypass -File scripts/make-icons.ps1"
   },
   "dependencies": {
     "preact": "^11.2.0"

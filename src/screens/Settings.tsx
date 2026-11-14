@@ -16,6 +16,7 @@ import { DEFAULT_MODEL, FALLBACK_MODEL, hasSheet, loadSettings, saveSettings, ty
 import { callSheet, errorMessage, setGoals, type DayResponse, type Totals } from '../sheet';
 import { cachedGoals } from '../day';
 import { dateString } from '../dates';
+import { loadTheme, saveTheme, THEMES, type Theme } from '../theme';
 import { checkGemini, geminiMessage } from '../gemini';
 
 type Status = { kind: 'idle' | 'busy' | 'ok' | 'error'; text: string };
@@ -57,6 +58,7 @@ export function SettingsScreen({ onClose, onGoalsSaved }: {
   const [status, setStatus] = useState<Status>({ kind: 'idle', text: '' });
   const [saveStatus, setSaveStatus] = useState<Status>({ kind: 'idle', text: '' });
   const [startGoals] = useState<Totals>(cachedGoals);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
   const [goals, setGoalFields] = useState<GoalFields>(() => ({
     kcal: String(startGoals.kcal),
     protein_g: String(startGoals.protein_g),
@@ -193,6 +195,18 @@ export function SettingsScreen({ onClose, onGoalsSaved }: {
           {status.text && (
             <p class={`status${status.kind === 'error' ? ' error' : ''}`} role="status">{status.text}</p>
           )}
+        </div>
+      </section>
+
+      {/* Theme: switches right away and is remembered (no Save needed). */}
+      <section class="card" aria-labelledby="theme-title">
+        <h2 id="theme-title">Theme</h2>
+        <div class="chips">
+          {THEMES.map((t) => (
+            <button class={`chip${t.id === theme ? ' on' : ''}`} onClick={() => { saveTheme(t.id); setTheme(t.id); }}>
+              {t.label}
+            </button>
+          ))}
         </div>
       </section>
 

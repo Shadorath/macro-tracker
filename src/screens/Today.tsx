@@ -65,7 +65,7 @@ export function TodayScreen({ day, connected, syncError, onOpenSettings, onOpenM
             <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
               <circle cx="52" cy="52" r={RING_R} fill="none" stroke="var(--track)" stroke-width="9" />
               {pct > 0 && (
-                <circle cx="52" cy="52" r={RING_R} fill="none" stroke="var(--ink)" stroke-width="9" stroke-linecap="round"
+                <circle cx="52" cy="52" r={RING_R} fill="none" stroke="var(--accent)" stroke-width="9" stroke-linecap="round"
                   stroke-dasharray={`${Math.min(1, pct) * RING_C} ${RING_C}`} transform="rotate(-90 52 52)" class="ring-fill" />
               )}
             </svg>

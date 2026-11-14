@@ -1,11 +1,18 @@
 /*
  * Macro Tracker styles.
- * Colours, sizes and spacing follow design/today-concept.html.
- * Light and dark themes follow the phone's setting (prefers-color-scheme).
+ * Sizes and spacing follow design/today-concept.html.
+ * Two colour themes (src/theme.ts): Classic (the design's colours, below in
+ * :root) and Cyberpunk (the default, :root[data-theme="cyberpunk"]).
+ * Each has light and dark colours that follow the phone (prefers-color-scheme).
  */
 
-/* ---------- Theme tokens ---------- */
+/* ---------- Theme tokens: Classic ---------- */
 :root {
+  --accent: var(--ink);        /* ring, camera button, Save, selected chip */
+  --on-accent: var(--on-ink);  /* text/icon on the accent colour */
+  --card-edge: transparent;    /* thin line around cards (Cyberpunk only) */
+  --accent-glow: none;         /* glow around the camera button (Cyberpunk dark) */
+  --ring-glow: none;           /* glow around the calorie ring (Cyberpunk dark) */
   --bg: #F2F2F4;
   --card: #FFFFFF;
   --ink: #2B2D33;       /* text and actions (soft charcoal, never pure black) */
@@ -36,6 +43,52 @@
     --over: #FB8A5C;
     --error: #F28B8B;     /* softer, pinkish red: #C62828 is hard to read on dark cards */
     color-scheme: dark;
+  }
+}
+
+/* ---------- Theme tokens: Cyberpunk ----------
+   Neon pink actions, purple / yellow / cyan macros. Solid colours and thin
+   sharp edges (no haze); only the ring and camera button get a tight glow,
+   and only in dark mode. */
+:root[data-theme="cyberpunk"] {
+  --bg: #F7F2FC;
+  --card: #FFFFFF;
+  --card-edge: #EBDDF7;
+  --ink: #24103F;
+  --quiet: #6E5A8A;
+  --track: #EFE5F8;
+  --divider: #F0E7F8;
+  --on-ink: #FFFFFF;
+  --accent: #E0115F;
+  --on-accent: #FFFFFF;
+  --protein: #8A2BE2;
+  --carbs: #D9A400;
+  --fat: #0097A7;
+  --over: #D9480F;
+  --error: #C62828;
+  --accent-glow: 0 4px 14px rgba(224, 17, 95, 0.35);
+  --ring-glow: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="cyberpunk"] {
+    --bg: #0A0614;
+    --card: #150D24;
+    --card-edge: #2E1B4D;
+    --ink: #F5F0FF;
+    --quiet: #A99BC7;
+    --track: #2A1A45;
+    --divider: #241640;
+    --on-ink: #0A0614;
+    --accent: #FF2A6D;
+    --on-accent: #0A0614;
+    --protein: #B967FF;
+    --carbs: #F9F002;
+    --fat: #05D9E8;
+    --over: #FF8A3D;
+    --error: #FF7A93;
+    --accent-glow: 0 0 0 1px #FF2A6D, 0 0 14px rgba(255, 42, 109, 0.6);
+    --ring-glow: drop-shadow(0 0 3px rgba(255, 42, 109, 0.85));
   }
 }
 
@@ -95,6 +148,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .card {
   background: var(--card);
   border-radius: 20px;
+  box-shadow: inset 0 0 0 1px var(--card-edge); /* thin edge, takes no space */
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -140,8 +194,8 @@ details .field { margin-bottom: 8px; }
   width: 100%;
   min-height: 52px;
   border-radius: 12px;
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 16px;
   font-weight: 500;
   text-align: center;
@@ -155,8 +209,8 @@ details .field { margin-bottom: 8px; }
   min-width: 88px;
   padding: 0 20px;
   border-radius: 12px;
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--accent);
+  color: var(--on-accent);
   font-size: 15px;
   font-weight: 500;
   text-align: center;
@@ -189,8 +243,9 @@ details .field { margin-bottom: 8px; }
   width: 72px;
   height: 72px;
   border-radius: 36px;
-  background: var(--ink);
-  color: var(--on-ink);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--accent-glow);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -216,7 +271,8 @@ details .field { margin-bottom: 8px; }
   font-size: 20px;
   font-weight: 700;
 }
-.ring-fill { transition: stroke-dasharray 150ms ease-out; }
+.ring svg { overflow: visible; } /* room for the Cyberpunk glow */
+.ring-fill { transition: stroke-dasharray 150ms ease-out; filter: var(--ring-glow); }
 .meals-row {
   display: flex;
   justify-content: space-between;
@@ -261,6 +317,7 @@ details .field { margin-bottom: 8px; }
   padding: 12px 20px calc(24px + env(safe-area-inset-bottom));
   background: var(--card);
   border-radius: 20px 20px 0 0;
+  box-shadow: inset 0 1px 0 var(--card-edge);
   animation: slide-up 150ms ease-out;
   transition: transform 150ms ease-out;
 }
@@ -343,7 +400,7 @@ details .field { margin-bottom: 8px; }
   width: 30%;
   height: 100%;
   border-radius: 2px;
-  background: var(--ink);
+  background: var(--accent);
   animation: progress 1.6s ease-in-out infinite;
 }
 @keyframes progress {
@@ -410,7 +467,7 @@ details .field { margin-bottom: 8px; }
   text-align: center;
   font-size: 15px;
 }
-.chip.on { background: var(--ink); color: var(--on-ink); }
+.chip.on { background: var(--accent); color: var(--on-accent); }
 
 .inline-editor { display: flex; flex-direction: column; gap: 8px; padding: 8px 0 4px; }
 .inline-field { display: flex; align-items: flex-end; gap: 12px; }
