@@ -2,11 +2,13 @@
  * Today screen (design/today-concept.html): answers "how much can I still
  * eat today?" at a glance.
  *
- * - Calories card: kcal left (big), "1520 of 2200 kcal eaten", a ring with
- *   the % eaten, and "Today's meals 3 ›". The whole card is one tap target
- *   that opens the meals sheet. Past the goal: "120 kcal over" in orange-red
- *   and a full ring.
- * - Macros card: protein, carbs, fat as coloured bars with "112 g / 150 g".
+ * - Calories card: kcal eaten (big, so it rises together with the ring %),
+ *   "680 kcal left of 2200" under it, a ring with the % eaten, and
+ *   "Today's meals 3 ›". The whole card is one tap target that opens the
+ *   meals sheet. Past the goal: "120 kcal over 2200", the eaten number in
+ *   orange-red and a full ring. (Istok's change to the spec, which had the
+ *   kcal left as the big number.)
+ * - Nutrients card: protein, carbs, fat as coloured bars with "112 g / 150 g".
  *   A bar stops at full; above 110 % the eaten value turns orange-red,
  *   except protein (going over is fine).
  * - The camera button, bottom centre.
@@ -36,9 +38,8 @@ export function TodayScreen({ day, connected, syncError, onOpenSettings, onOpenM
   const pct = goal > 0 ? eaten / goal : 0;
   const mealCount = day.meals.length;
 
-  const label = over
-    ? `${-left} kcal over today, ${Math.round(pct * 100)} percent of goal eaten. Show today's meals`
-    : `${left} kcal left today, ${Math.round(pct * 100)} percent of goal eaten. Show today's meals`;
+  const label = `${eaten} kcal eaten today, ${over ? `${-left} kcal over` : `${left} kcal left`}, `
+    + `${Math.round(pct * 100)} percent of goal. Show today's meals`;
 
   return (
     <main class="screen today">
@@ -53,10 +54,12 @@ export function TodayScreen({ day, connected, syncError, onOpenSettings, onOpenM
           <div class="cal-text">
             <span class="label">Calories</span>
             <div class={`big${over ? ' over' : ''}`}>
-              <span class="num">{Math.abs(left)}</span>
-              <span class="unit">{over ? 'kcal over' : 'left'}</span>
+              <span class="num">{eaten}</span>
+              <span class="unit">eaten</span>
             </div>
-            <span class="sub">{eaten} of {goal} kcal eaten</span>
+            <span class={`sub${over ? ' over' : ''}`}>
+              {over ? `${-left} kcal over ${goal}` : `${left} kcal left of ${goal}`}
+            </span>
           </div>
           <div class="ring">
             <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
@@ -75,9 +78,9 @@ export function TodayScreen({ day, connected, syncError, onOpenSettings, onOpenM
         </div>
       </button>
 
-      {/* Macros card */}
-      <section class="card macros" aria-label="Macros today">
-        <h2>Macros</h2>
+      {/* Nutrients card */}
+      <section class="card macros" aria-label="Nutrients today">
+        <h2>Nutrients</h2>
         <MacroRow name="Protein" colour="var(--protein)" eaten={day.totals.protein_g} goal={day.goals.protein_g} warns={false} />
         <MacroRow name="Carbs" colour="var(--carbs)" eaten={day.totals.carbs_g} goal={day.goals.carbs_g} warns />
         <MacroRow name="Fat" colour="var(--fat)" eaten={day.totals.fat_g} goal={day.goals.fat_g} warns />

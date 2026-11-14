@@ -8,8 +8,9 @@
  *   (Delete meal and Past days come in milestone 5.)
  */
 
-import { useRef, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { DayResponse } from '../sheet';
+import { pfc } from '../meal';
 
 type Props = {
   day: DayResponse;
@@ -21,9 +22,23 @@ export function MealsSheet({ day, onClose, onAddManually }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
-  // Swipe down on the sheet to close it.
-  const onTouchStart = (e: TouchEvent) => { startY.current = e.touches[0].clientY; };
+  // While the sheet is open, the Today screen behind it must not scroll,
+  // otherwise it "steals" the swipe.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, []);
+
+  // Swipe down on the sheet to close it. If the meal list is scrolled down,
+  // a swipe scrolls the list back up first instead.
+  const onTouchStart = (e: TouchEvent) => {
+    const list = listRef.current;
+    const inScrolledList = list && list.contains(e.target as Node) && list.scrollTop > 0;
+    startY.current = inScrolledList ? null : e.touches[0].clientY;
+  };
   const onTouchMove = (e: TouchEvent) => {
     if (startY.current === null) return;
     setDragY(Math.max(0, e.touches[0].clientY - startY.current));
@@ -51,7 +66,7 @@ export function MealsSheet({ day, onClose, onAddManually }: Props) {
           <span class="label">{Math.round(day.totals.kcal)} kcal</span>
         </div>
 
-        <div class="sheet-list">
+        <div class="sheet-list" ref={listRef}>
           {!day.meals.length && <p class="hint">Nothing logged yet today.</p>}
           {day.meals.map((meal) => {
             const open = openId === meal.id;
@@ -68,8 +83,11 @@ export function MealsSheet({ day, onClose, onAddManually }: Props) {
                   <ul class="meal-items">
                     {meal.items.map((item) => (
                       <li>
-                        <span>{item.name} · {Math.round(item.grams)} g</span>
-                        <span>{Math.round(item.kcal)} kcal</span>
+                        <div class="meal-item-top">
+                          <span>{item.name} · {Math.round(item.grams)} g</span>
+                          <span>{Math.round(item.kcal)} kcal</span>
+                        </div>
+                        <span class="meal-item-pfc">{pfc(item)}</span>
                       </li>
                     ))}
                   </ul>

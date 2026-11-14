@@ -190,8 +190,9 @@ details .field { margin-bottom: 8px; }
 .big { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
 .big .num { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
 .big .unit { font-size: 20px; color: var(--quiet); white-space: nowrap; } /* "kcal over" never splits */
-.big.over .num, .big.over .unit { color: var(--over); }
+.big.over .num { color: var(--over); }
 .sub { font-size: 14px; color: var(--quiet); }
+.sub.over { color: var(--over); }
 .ring { position: relative; width: 104px; height: 104px; flex: none; }
 .ring span {
   position: absolute;
@@ -229,7 +230,9 @@ details .field { margin-bottom: 8px; }
 .hint.center { text-align: center; }
 
 /* ---------- Today's meals sheet ---------- */
-.sheet-layer { position: fixed; inset: 0; z-index: 10; }
+/* touch-action: none = the browser doesn't scroll or pan here, so our own
+   swipe-down handling gets the gesture. The meal list may still scroll. */
+.sheet-layer { position: fixed; inset: 0; z-index: 10; touch-action: none; overscroll-behavior: contain; }
 .scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.32); animation: fade-in 150ms ease-out; }
 @media (prefers-color-scheme: dark) { .scrim { background: rgba(0, 0, 0, 0.55); } }
 .sheet {
@@ -251,7 +254,7 @@ details .field { margin-bottom: 8px; }
 .handle { align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--track); flex: none; }
 .sheet-head { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 4px; }
 .sheet-head h2 { margin: 0; font-size: 20px; font-weight: 500; }
-.sheet-list { overflow-y: auto; }
+.sheet-list { overflow-y: auto; touch-action: pan-y; overscroll-behavior: contain; }
 .meal { border-bottom: 1px solid var(--divider); }
 .meal-main {
   width: 100%;
@@ -264,8 +267,10 @@ details .field { margin-bottom: 8px; }
 }
 .meal-main small { display: block; font-size: 13px; color: var(--quiet); margin-bottom: 3px; }
 .meal-main > span { white-space: nowrap; }
-.meal-items { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.meal-items li { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--quiet); }
+.meal-items { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.meal-items li { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--quiet); }
+.meal-item-top { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); }
+.meal-item-pfc { font-size: 13px; }
 .sheet-actions { display: flex; justify-content: space-between; margin-top: 8px; font-size: 15px; }
 .sheet-actions button { min-height: 48px; }
 .sheet-actions .primary { font-weight: 500; }
