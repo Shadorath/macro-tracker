@@ -401,11 +401,11 @@ function ItemRow({ item, editor, setEditor, onGrams, onRename, onDelete }: {
 function TextEditor({ label, value, placeholder, onDone }: { label: string; value: string; placeholder?: string; onDone: (v: string) => void }) {
   const [text, setText] = useState(value);
   return (
-    <form class="inline-field" onSubmit={(e) => { e.preventDefault(); onDone(text.trim()); }}>
+    <form autocomplete="off" class="inline-field" onSubmit={(e) => { e.preventDefault(); onDone(text.trim()); }}>
       <div class="field">
         <label>
           {label}
-          <input value={text} placeholder={placeholder} onInput={(e) => setText(e.currentTarget.value)} autoFocus />
+          <input autocomplete="off" value={text} placeholder={placeholder} onInput={(e) => setText(e.currentTarget.value)} autoFocus />
         </label>
       </div>
       <button class="text-btn" type="submit">Done</button>
@@ -417,11 +417,11 @@ function TextEditor({ label, value, placeholder, onDone }: { label: string; valu
 function NumberEditor({ label, value, onDone }: { label: string; value: number; onDone: (v: number) => void }) {
   const [text, setText] = useState(String(value));
   return (
-    <form class="inline-field" onSubmit={(e) => { e.preventDefault(); const n = Number(text); if (n >= 0) onDone(n); }}>
+    <form autocomplete="off" class="inline-field" onSubmit={(e) => { e.preventDefault(); const n = Number(text); if (n >= 0) onDone(n); }}>
       <div class="field">
         <label>
           {label}
-          <input type="number" inputMode="decimal" min="0" value={text} onInput={(e) => setText(e.currentTarget.value)} />
+          <input autocomplete="off" type="number" inputMode="decimal" min="0" value={text} onInput={(e) => setText(e.currentTarget.value)} />
         </label>
       </div>
       <button class="text-btn" type="submit">Done</button>
@@ -434,7 +434,7 @@ function TimeEditor({ value, onDone }: { value: Date; onDone: (d: Date) => void 
   const toInput = (d: Date) => timestampString(d).replace(' ', 'T'); // "2026-11-14T12:35"
   const [text, setText] = useState(toInput(value));
   return (
-    <form class="inline-field" onSubmit={(e) => {
+    <form autocomplete="off" class="inline-field" onSubmit={(e) => {
       e.preventDefault();
       const d = new Date(text); // read as the phone's local time
       if (!isNaN(d.getTime())) onDone(d);
@@ -442,7 +442,7 @@ function TimeEditor({ value, onDone }: { value: Date; onDone: (d: Date) => void 
       <div class="field">
         <label>
           When did you eat it?
-          <input type="datetime-local" value={text} max={toInput(new Date())} onInput={(e) => setText(e.currentTarget.value)} />
+          <input autocomplete="off" type="datetime-local" value={text} max={toInput(new Date())} onInput={(e) => setText(e.currentTarget.value)} />
         </label>
       </div>
       <button class="text-btn" type="submit">Done</button>
@@ -454,11 +454,11 @@ function TimeEditor({ value, onDone }: { value: Date; onDone: (d: Date) => void 
 function RecheckEditor({ onRecheck }: { onRecheck: (note: string) => void }) {
   const [text, setText] = useState('');
   return (
-    <form class="inline-field" onSubmit={(e) => { e.preventDefault(); if (text.trim()) onRecheck(text); }}>
+    <form autocomplete="off" class="inline-field" onSubmit={(e) => { e.preventDefault(); if (text.trim()) onRecheck(text); }}>
       <div class="field">
         <label>
           Note for Gemini
-          <input value={text} placeholder="e.g. half portion, cooked in butter" onInput={(e) => setText(e.currentTarget.value)} autoFocus />
+          <input autocomplete="off" value={text} placeholder="e.g. half portion, cooked in butter" onInput={(e) => setText(e.currentTarget.value)} autoFocus />
         </label>
       </div>
       <button class="text-btn" type="submit">Re-check</button>
@@ -569,17 +569,17 @@ function AddFood({ settings, onAdd, onCancel }: {
     <div class="field">
       <label>
         {label}
-        <input type="number" inputMode="decimal" min="0" step="any" value={f[key]} onInput={set(key)} />
+        <input autocomplete="off" type="number" inputMode="decimal" min="0" step="any" value={f[key]} onInput={set(key)} />
       </label>
     </div>
   );
 
   return (
-    <form class="add-food" onSubmit={submit}>
+    <form autocomplete="off" class="add-food" onSubmit={submit}>
       <div class="field">
         <label>
           Food
-          <input value={f.name} onInput={set('name')} autoFocus />
+          <input autocomplete="off" value={f.name} onInput={set('name')} autoFocus />
         </label>
       </div>
       <div class="grid-2">

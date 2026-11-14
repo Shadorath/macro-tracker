@@ -299,9 +299,12 @@ details .field { margin-bottom: 8px; }
 .hint.center { text-align: center; }
 
 /* ---------- Today's meals sheet ---------- */
-/* touch-action: none = the browser doesn't scroll or pan here, so our own
-   swipe-down handling gets the gesture. The meal list may still scroll. */
-.sheet-layer { position: fixed; inset: 0; z-index: 10; touch-action: none; overscroll-behavior: contain; }
+/* The page behind can't scroll while the sheet is open (MealsSheet locks
+   body scrolling), so our own swipe-down handling gets the gesture.
+   No touch-action: none here: Chrome on Android kept that "don't scroll"
+   rule for one more swipe after the sheet closed, so the first swipe in
+   manual entry (opened from the sheet) did nothing. */
+.sheet-layer { position: fixed; inset: 0; z-index: 10; overscroll-behavior: contain; }
 .scrim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.32); animation: fade-in 150ms ease-out; }
 @media (prefers-color-scheme: dark) { .scrim { background: rgba(0, 0, 0, 0.55); } }
 .sheet {
@@ -385,13 +388,6 @@ details .field { margin-bottom: 8px; }
 .toast button { min-height: 48px; padding: 0 12px; font-weight: 700; color: var(--on-ink); }
 
 /* ---------- Review ---------- */
-/* Always taller than the screen, like Settings. Manual entry otherwise fits
-   on the screen and only becomes scrollable once the keyboard opens, and
-   Chrome on Android then ignores the first swipe (tested on the phone; pages
-   that can already scroll before the keyboard, like Settings, don't have
-   this). The extra space sits above the Save bar and only shows when you
-   scroll to the very bottom. */
-.screen.review { min-height: 140dvh; }
 .thumb {
   width: 100%;
   max-height: 220px;
