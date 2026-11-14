@@ -1,0 +1,14 @@
+# Installed packages and build output (recreated by npm install / npm run build)
+node_modules/
+dist/
+
+# Never commit secrets or local settings
+*.local
+.env
+.env.*
+*secrets*
+
+# Editor / OS clutter
+.vscode/
+.DS_Store
+Thumbs.db

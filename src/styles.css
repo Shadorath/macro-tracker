@@ -1,0 +1,169 @@
+/*
+ * Macro Tracker styles.
+ * Colours, sizes and spacing follow design/today-concept.html.
+ * Light and dark themes follow the phone's setting (prefers-color-scheme).
+ */
+
+/* ---------- Theme tokens ---------- */
+:root {
+  --bg: #F2F2F4;
+  --card: #FFFFFF;
+  --ink: #2B2D33;       /* text and actions (soft charcoal, never pure black) */
+  --quiet: #6E7079;     /* secondary text */
+  --track: #ECECEF;     /* empty bar/ring track, input background */
+  --divider: #EFEFF1;
+  --on-ink: #FFFFFF;    /* text/icon on an ink button */
+  --protein: #6D4AFF;
+  --carbs: #F2A11B;
+  --fat: #3D9BF2;
+  --over: #C2410C;
+  --error: #C62828;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E0E10;
+    --card: #1A1A1D;
+    --ink: #F2F2F2;
+    --quiet: #A1A1A6;
+    --track: #2C2C30;
+    --divider: #26262A;
+    --on-ink: #0E0E10;
+    --protein: #A08CFF;
+    --carbs: #F7B955;
+    --fat: #6AB0F7;
+    --over: #FB8A5C;
+    --error: #F28B8B;     /* softer, pinkish red: #C62828 is hard to read on dark cards */
+    color-scheme: dark;
+  }
+}
+
+/* ---------- Base ---------- */
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums; /* numbers don't jump when they change */
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+button:disabled { opacity: 0.5; cursor: default; }
+
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---------- Screen layout ---------- */
+.screen {
+  min-height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+/* Top bar: date or title on the left, one quiet text button on the right */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 4px;
+  font-size: 15px;
+  color: var(--quiet);
+}
+.topbar h1 { margin: 0; font-size: 20px; font-weight: 500; color: var(--ink); }
+.topbar button { min-height: 48px; padding-left: 16px; color: var(--quiet); }
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.card h2 { margin: 0; font-size: 17px; font-weight: 500; }
+
+.label { font-size: 15px; color: var(--quiet); }
+.hint { font-size: 13px; color: var(--quiet); margin: 0; line-height: 1.4; }
+
+/* ---------- Form fields ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 14px; color: var(--quiet); }
+.field input {
+  height: 48px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: var(--track);
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px; /* 16 px stops Android from zooming in on focus */
+  width: 100%;
+}
+
+/* "Advanced" fold-out in Settings */
+details summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  color: var(--quiet);
+  cursor: pointer;
+  list-style: none;
+}
+details summary::-webkit-details-marker { display: none; }
+details summary::after { content: '›'; display: inline-block; margin-left: 6px; }
+details[open] summary::after { transform: rotate(90deg); }
+details .field { margin-bottom: 8px; }
+
+/* ---------- Buttons ---------- */
+.btn-primary {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.text-btn { min-height: 48px; font-size: 15px; font-weight: 500; }
+.text-btn.quiet { color: var(--quiet); font-weight: 400; }
+
+/* Bottom area that holds the main button, stays visible while scrolling */
+.bottom-bar {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  background: var(--bg);
+}
+
+/* ---------- Status lines ---------- */
+.status { font-size: 14px; margin: 0; line-height: 1.4; }
+.status.error { color: var(--error); }
+
+/* ---------- Motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

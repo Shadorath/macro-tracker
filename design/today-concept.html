@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Macro Tracker: Today screen concept</title>
+<!--
+  Visual reference for the Today screen (static mockup, example numbers).
+  Three frames: light, light with the meals sheet open, dark.
+  The real app follows the phone's light/dark setting via prefers-color-scheme.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; padding: 40px; background: #DADADF; font-family: Roboto, system-ui, sans-serif; }
+  .frames { display: flex; gap: 48px; flex-wrap: wrap; }
+  .caption { font: 500 14px Roboto, sans-serif; color: #444; margin: 0 0 12px; }
+
+  /* Theme tokens */
+  .light { --bg:#F2F2F4; --card:#FFFFFF; --ink:#2B2D33; --quiet:#6E7079; --track:#ECECEF; --ring:#2B2D33; --divider:#EFEFF1; --scrim:rgba(0,0,0,.32); --on-ink:#FFFFFF;
+           --protein:#6D4AFF; --carbs:#F2A11B; --fat:#3D9BF2; --over:#C2410C; }
+  .dark  { --bg:#0E0E10; --card:#1A1A1D; --ink:#F2F2F2; --quiet:#A1A1A6; --track:#2C2C30; --ring:#F2F2F2; --divider:#26262A; --scrim:rgba(0,0,0,.55); --on-ink:#0E0E10;
+           --protein:#A08CFF; --carbs:#F7B955; --fat:#6AB0F7; --over:#FB8A5C; }
+
+  .phone { width: 390px; height: 844px; position: relative; overflow: hidden; box-sizing: border-box;
+           background: var(--bg); color: var(--ink); border-radius: 32px; font-variant-numeric: tabular-nums; }
+  .content { display: flex; flex-direction: column; gap: 16px; padding: 12px 16px 0; }
+  button { background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+
+  .topbar { display: flex; justify-content: space-between; align-items: center; height: 48px; padding: 0 4px; font-size: 15px; color: var(--quiet); }
+  .topbar button { min-height: 48px; padding-left: 16px; color: var(--quiet); }
+
+  .card { background: var(--card); border-radius: 20px; }
+  .calories { padding: 24px 20px 0; display: flex; flex-direction: column; width: 100%; box-sizing: border-box; }
+  .cal-row { display: flex; justify-content: space-between; align-items: center; }
+  .cal-text { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 15px; color: var(--quiet); }
+  .big { display: flex; align-items: baseline; gap: 8px; }
+  .big .num { font-size: 64px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+  .big .unit { font-size: 20px; color: var(--quiet); }
+  .sub { font-size: 14px; color: var(--quiet); }
+  .ring { position: relative; width: 104px; height: 104px; }
+  .ring span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
+  .meals-row { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; height: 52px; border-top: 1px solid var(--divider); font-size: 15px; }
+  .meals-row .count { color: var(--quiet); }
+
+  .macros { padding: 20px; display: flex; flex-direction: column; gap: 22px; }
+  .macros h2 { margin: 0; font-size: 17px; font-weight: 500; }
+  .macro { display: flex; flex-direction: column; gap: 10px; }
+  .macro-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; }
+  .macro-name { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+  .dot { width: 10px; height: 10px; border-radius: 5px; }
+  .eaten { font-weight: 700; }
+  .goal { color: var(--quiet); }
+  .bar { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; }
+  .bar div { height: 8px; border-radius: 4px; }
+
+  .camera { position: absolute; left: 159px; bottom: 48px; width: 72px; height: 72px; border-radius: 36px; background: var(--ink);
+            display: flex; align-items: center; justify-content: center; }
+
+  .scrim { position: absolute; inset: 0; background: var(--scrim); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 20px 32px; background: var(--card); border-radius: 20px 20px 0 0; display: flex; flex-direction: column; }
+  .handle { align-self: center; width: 36px; height: 4px; border-radius: 2px; background: var(--track); }
+  .sheet-head { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 4px; }
+  .sheet-head h2 { margin: 0; font-size: 20px; font-weight: 500; }
+  .meal { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--divider); font-size: 16px; }
+  .meal small { display: block; font-size: 13px; color: var(--quiet); margin-bottom: 3px; }
+  .sheet-actions { display: flex; justify-content: space-between; margin-top: 8px; font-size: 15px; }
+  .sheet-actions button { min-height: 48px; }
+  .sheet-actions .primary { font-weight: 500; }
+  .sheet-actions .quiet { color: var(--quiet); }
+</style>
+</head>
+<body>
+<div class="frames">
+
+<!-- ===== One Today screen; repeated three times below ===== -->
+<template id="today">
+  <div class="content">
+    <div class="topbar"><span>Saturday, 14 November</span><button>Settings</button></div>
+
+    <!-- Calories card: the whole card is one tap target that opens the meals sheet -->
+    <button class="card calories" aria-label="680 kcal left today, 69 percent of goal eaten. Show today's meals">
+      <div class="cal-row">
+        <div class="cal-text">
+          <span class="label">Calories</span>
+          <div class="big"><span class="num">680</span><span class="unit">left</span></div>
+          <span class="sub">1520 of 2200 kcal eaten</span>
+        </div>
+        <div class="ring">
+          <!-- r=44 → circumference 276.5; 69% → dash 190.8 -->
+          <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
+            <circle cx="52" cy="52" r="44" fill="none" stroke="var(--track)" stroke-width="9"/>
+            <circle cx="52" cy="52" r="44" fill="none" stroke="var(--ring)" stroke-width="9" stroke-linecap="round"
+                    stroke-dasharray="190.8 276.5" transform="rotate(-90 52 52)"/>
+          </svg>
+          <span>69%</span>
+        </div>
+      </div>
+      <div class="meals-row"><span>Today's meals</span><span class="count">3 ›</span></div>
+    </button>
+
+    <!-- Macros card -->
+    <section class="card macros" aria-label="Macros today">
+      <h2>Macros</h2>
+      <div class="macro">
+        <div class="macro-head"><span class="macro-name"><span class="dot" style="background:var(--protein)"></span>Protein</span>
+          <span><span class="eaten">112 g</span><span class="goal"> / 150 g</span></span></div>
+        <div class="bar"><div style="width:75%;background:var(--protein)"></div></div>
+      </div>
+      <div class="macro">
+        <div class="macro-head"><span class="macro-name"><span class="dot" style="background:var(--carbs)"></span>Carbs</span>
+          <span><span class="eaten">160 g</span><span class="goal"> / 220 g</span></span></div>
+        <div class="bar"><div style="width:73%;background:var(--carbs)"></div></div>
+      </div>
+      <div class="macro">
+        <div class="macro-head"><span class="macro-name"><span class="dot" style="background:var(--fat)"></span>Fat</span>
+          <span><span class="eaten">48 g</span><span class="goal"> / 70 g</span></span></div>
+        <div class="bar"><div style="width:69%;background:var(--fat)"></div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Camera button: the only icon in the app -->
+  <button class="camera" aria-label="Take a photo of your meal">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--on-ink)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.5"/>
+    </svg>
+  </button>
+</template>
+
+<template id="sheet">
+  <div class="scrim"></div>
+  <section class="sheet" aria-label="Today's meals">
+    <div class="handle"></div>
+    <div class="sheet-head"><h2>Today's meals</h2><span class="label">1520 kcal</span></div>
+    <div class="meal"><div><small>Breakfast · 8:10</small>Oats with berries</div><span>420 kcal</span></div>
+    <div class="meal"><div><small>Snack · 10:30</small>Greek yogurt, nuts</div><span>460 kcal</span></div>
+    <div class="meal"><div><small>Lunch · 12:35</small>Chicken rice bowl</div><span>640 kcal</span></div>
+    <div class="sheet-actions"><button class="primary">Add manually</button><button class="quiet">Past days ›</button></div>
+  </section>
+</template>
+
+<div><p class="caption">Today · light</p><div class="phone light" data-screen="today"></div></div>
+<div><p class="caption">Today · meals sheet open (after tapping the calories card)</p><div class="phone light" data-screen="today sheet"></div></div>
+<div><p class="caption">Today · dark</p><div class="phone dark" data-screen="today"></div></div>
+
+</div>
+<script>
+  // Fill each frame from the templates (keeps the mockup markup in one place).
+  document.querySelectorAll('.phone').forEach(function (phone) {
+    phone.dataset.screen.split(' ').forEach(function (id) {
+      phone.appendChild(document.getElementById(id).content.cloneNode(true));
+    });
+  });
+</script>
+</body>
+</html>
