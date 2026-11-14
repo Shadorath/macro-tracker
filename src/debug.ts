@@ -49,11 +49,23 @@ export function startDebug() {
   };
 
   const opts = { capture: true, passive: true };
-  addEventListener('touchstart', (e) => { moves = 0; log(`touchstart ${name(e.target)}`); }, opts);
+  // Scrolls are counted, not listed one by one: one line per swipe (or per
+  // burst of scrolling with no finger on the screen).
+  let touching = false;
+  let scrolls = 0;
+  let quietTimer = 0;
+  addEventListener('touchstart', (e) => { touching = true; moves = 0; scrolls = 0; log(`TOUCH START on ${name(e.target)}`); }, opts);
   addEventListener('touchmove', (e) => { if (++moves <= 2) log(`touchmove#${moves} cancelable=${e.cancelable}`); }, opts);
-  addEventListener('touchend', () => log(`touchend after ${moves} moves`), opts);
+  addEventListener('touchend', () => { touching = false; log(`TOUCH END: ${moves} moves, ${scrolls} scrolls`); scrolls = 0; }, opts);
+  addEventListener('touchcancel', () => log('touchcancel'), opts);
   addEventListener('pointercancel', () => log('pointercancel (Chrome scrolls)'), opts);
-  document.addEventListener('scroll', (e) => log(`scroll ${name(e.target)}`), opts);
+  document.addEventListener('scroll', (e) => {
+    scrolls++;
+    if (touching) { if (scrolls === 1) log(`first scroll: ${name(e.target)}`); return; }
+    // Scrolling without a finger (e.g. Chrome moving the field into view).
+    clearTimeout(quietTimer);
+    quietTimer = window.setTimeout(() => { log(`no-finger scrolls: ${scrolls} (${name(e.target)})`); scrolls = 0; }, 300);
+  }, opts);
   addEventListener('resize', () => log(`resize inner=${innerHeight}`), opts);
   window.visualViewport?.addEventListener('resize', () => log(`vv resize ${Math.round(visualViewport!.height)}`));
   window.visualViewport?.addEventListener('scroll', () => log(`vv scroll top=${Math.round(visualViewport!.offsetTop)}`));
