@@ -28,6 +28,7 @@ import { hasSheet, loadSettings } from './settings';
 import { preparePhoto, type Photo } from './photo';
 import { dateString } from './dates';
 import { newVersionOnline } from './update';
+import { primeKeyboard } from './keyboard';
 import { cacheDay, emptyDay, loadCachedDay, withMeal, withoutMeal } from './day';
 import { addMeal, deleteMeal, errorMessage, getDay, SheetError, type DayResponse, type Meal, type Totals } from './sheet';
 
@@ -136,6 +137,7 @@ export function App() {
 
   // "Add manually": Review without a photo.
   function openManual() {
+    primeKeyboard(); // keyboard opens now, inside the tap (see keyboard.ts)
     setReview({ photo: null, id: review.id + 1 });
     open('review');
   }

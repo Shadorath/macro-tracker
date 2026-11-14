@@ -19,6 +19,7 @@ import type { Settings } from '../settings';
 import type { Meal } from '../sheet';
 import { errorMessage } from '../sheet';
 import { dateString, timestampString } from '../dates';
+import { primeKeyboard } from '../keyboard';
 import { analyzePhoto, estimateFood, geminiMessage, GeminiError, type GeminiErrorKind } from '../gemini';
 import {
   MEAL_TYPES, mealTypeFor, pfc, toReviewItem, totalsOf, withGrams,
@@ -131,6 +132,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
     setItems((list) => list.flatMap((i) => (i.id === id ? (change(i) ?? []) : [i])));
 
   const switchToManual = () => {
+    primeKeyboard(); // keyboard opens inside the tap (see keyboard.ts)
     setPhase({ kind: 'ready' });
     setEditor({ kind: 'add' });
   };
@@ -280,7 +282,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
           {note && <p class="hint">{note}</p>}
 
           <div class="row-actions">
-            <button class="text-btn" onClick={() => setEditor({ kind: 'add' })}>+ Add food</button>
+            <button class="text-btn" onClick={() => { primeKeyboard(); setEditor({ kind: 'add' }); }}>+ Add food</button>
             {photo && (
               <button class="text-btn quiet" onClick={() => setEditor({ kind: 'recheck' })}>Re-check with a note</button>
             )}
@@ -479,6 +481,11 @@ function AddFood({ settings, onAdd, onCancel }: {
   const [f, setF] = useState({ name: '', grams: '', kcal: '', protein_g: '', fat_g: '', carbs_g: '' });
   const [error, setError] = useState('');
   const [estimating, setEstimating] = useState(false);
+  // Put the cursor in the Food box when the form appears. (The tap that opened
+  // the form already opened the keyboard, see keyboard.ts; the browser's own
+  // autofocus is skipped then, so we focus it ourselves.)
+  const foodInput = useRef<HTMLInputElement>(null);
+  useEffect(() => { foodInput.current?.focus({ preventScroll: true }); }, []);
   const [confidence, setConfidence] = useState<FoodItem['confidence']>(''); // from Gemini, if estimated
   // After Estimate, the values per gram, so changing grams rescales the numbers.
   // Cleared as soon as you type a kcal or macro yourself.
@@ -579,7 +586,7 @@ function AddFood({ settings, onAdd, onCancel }: {
       <div class="field">
         <label>
           Food
-          <input autocomplete="off" value={f.name} onInput={set('name')} autoFocus />
+          <input autocomplete="off" ref={foodInput} value={f.name} onInput={set('name')} />
         </label>
       </div>
       <div class="grid-2">
