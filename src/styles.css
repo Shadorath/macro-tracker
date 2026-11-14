@@ -386,10 +386,22 @@ details .field { margin-bottom: 8px; }
 
 /* ---------- Review ---------- */
 /* Review scrolls inside its own box, exactly as tall as the visible screen
-   (which shrinks when the keyboard opens). Manual entry is short and only
-   becomes scrollable once the keyboard is up; with the whole page as the
-   scroller, Chrome then ignored the first swipe. */
-.screen.review { height: 100dvh; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
+   (which shrinks when the keyboard opens).
+   Manual entry is shorter than the screen, so it only became scrollable once
+   the keyboard was up, and Chrome ignored the first swipe after that (seen
+   with a debug readout on the phone). The invisible ::after line is 1 px
+   taller than the box, so the box can always scroll a little and Chrome
+   already treats it as scrollable before the keyboard opens. */
+.screen.review { position: relative; height: 100dvh; overflow-y: auto; overscroll-behavior: contain; padding-bottom: 0; }
+.screen.review::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: calc(100% + 1px);
+  pointer-events: none;
+}
 /* ...and its Save bar holds the bottom spacing, so it sits on the very edge
    with nothing showing through underneath. */
 .screen.review .bottom-bar { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
