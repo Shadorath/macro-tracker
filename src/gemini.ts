@@ -177,7 +177,7 @@ function kindForStatus(status: number, text: string): GeminiErrorKind {
   if (status === 429) return 'limit';
   if (status === 401 || status === 403) return 'key';
   if (status === 400 && /api key/i.test(text)) return 'key';
-  if (status === 404) return 'key'; // unknown model name â€“ also fixed in Settings
+  if (status === 404) return 'key'; // unknown model name - also fixed in Settings
   if (status >= 500) return 'busy';
   return 'bad';
 }

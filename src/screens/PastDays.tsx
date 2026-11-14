@@ -96,7 +96,12 @@ export function PastDaysScreen({ onClose, onDelete }: {
         </div>
       )}
 
-      {!days && !error && <p class="label">Loading…</p>}
+      {!days && !error && (
+        <div class="analyzing" role="status">
+          <div class="progress-line"><div /></div>
+          <span class="label">Loading the last {DAYS} days…</span>
+        </div>
+      )}
 
       {days && goals && (
         <section class="card past-days">
@@ -121,7 +126,7 @@ export function PastDaysScreen({ onClose, onDelete }: {
                 {isOpen && (
                   <div class="past-day-meals">
                     {open.error && <p class="status error">{open.error}</p>}
-                    {!open.meals && !open.error && <p class="label">Loading…</p>}
+                    {!open.meals && !open.error && <div class="progress-line" role="status" aria-label="Loading meals"><div /></div>}
                     {open.meals && <MealList meals={open.meals} empty="No meals left on this day." onDelete={deleteMeal} />}
                   </div>
                 )}

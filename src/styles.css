@@ -303,6 +303,8 @@ details .field { margin-bottom: 8px; }
 .past-days > .hint { margin-top: 16px; }
 
 /* ---------- Toast ---------- */
+/* The "New version" note stays until tapped, so it sits above the camera button. */
+.toast.above-camera { bottom: calc(136px + env(safe-area-inset-bottom)); }
 .toast {
   position: fixed;
   left: 16px;
@@ -368,6 +370,7 @@ details .field { margin-bottom: 8px; }
   white-space: nowrap;
 }
 .meal-head .text-btn { font-weight: 400; color: var(--quiet); font-size: 15px; }
+.meal-name.auto { color: var(--quiet); } /* not named yet: first food's name, greyed */
 
 .items { display: flex; flex-direction: column; }
 .item { padding: 12px 0; border-bottom: 1px solid var(--divider); display: flex; flex-direction: column; gap: 4px; }

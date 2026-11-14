@@ -27,6 +27,7 @@ import { Toast, type ToastData } from './components/Toast';
 import { hasSheet, loadSettings } from './settings';
 import { preparePhoto, type Photo } from './photo';
 import { dateString } from './dates';
+import { newVersionOnline } from './update';
 import { cacheDay, emptyDay, loadCachedDay, withMeal, withoutMeal } from './day';
 import { addMeal, deleteMeal, errorMessage, getDay, SheetError, type DayResponse, type Meal, type Totals } from './sheet';
 
@@ -49,6 +50,7 @@ export function App() {
   const [day, setDayState] = useState<DayResponse>(loadCachedDay);
   const [syncError, setSyncError] = useState('');
   const [toast, setToast] = useState<ToastData | null>(null);
+  const [updateReady, setUpdateReady] = useState(false); // a newer version is online
   const fileInput = useRef<HTMLInputElement>(null);
   const dayRef = useRef(day);         // latest day, for code that runs later (Undo)
   const localChanges = useRef(0);     // bumps on every save/undo made on the phone
@@ -83,7 +85,13 @@ export function App() {
     // Back lands on the entry below: the meals sheet (if Past days was opened
     // from it) or Today (no saved screen).
     const onBack = (e: PopStateEvent) => setScreen(e.state?.screen ?? 'today');
-    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    const checkUpdate = async () => { if (await newVersionOnline()) setUpdateReady(true); };
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      refresh();
+      checkUpdate();
+    };
+    checkUpdate();
     window.addEventListener('popstate', onBack);
     document.addEventListener('visibilitychange', onVisible);
     // (The first refresh runs from the "coming back to Today" effect below.)
@@ -248,6 +256,14 @@ export function App() {
       )}
 
       {toast && <Toast toast={toast} onDone={() => setToast(null)} />}
+
+      {/* Only on Today, so a reload never throws away a meal being edited. */}
+      {updateReady && !toast && screen === 'today' && (
+        <div class="toast above-camera" role="status">
+          <span>New version</span>
+          <button onClick={() => location.reload()}>Reload</button>
+        </div>
+      )}
     </>
   );
 }

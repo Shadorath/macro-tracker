@@ -88,6 +88,9 @@ export function SettingsScreen({ onClose, onGoalsSaved }: {
       return setStatus({ kind: 'error', text: 'Enter the Apps Script URL and token first.' });
     }
 
+    // No internet: one clear line instead of two failures.
+    if (!navigator.onLine) return setStatus({ kind: 'error', text: 'No internet. Connect and test again.' });
+
     setStatus({ kind: 'busy', text: 'Testing…' });
     const [sheet, gemini] = await Promise.allSettled([
       callSheet<DayResponse>(f, 'getDay', { date: dateString() }),

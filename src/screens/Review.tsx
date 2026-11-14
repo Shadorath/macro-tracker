@@ -142,6 +142,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
 
   // Until you pick a type yourself, keep guessing it from the time and size.
   const totalKcal = items.reduce((sum, i) => sum + i.kcal, 0);
+  const autoName = items[0]?.name ?? ''; // the meal's name until you give it one
   useEffect(() => {
     if (!typePicked) setMealType(mealTypeFor(mealTime, totalKcal));
   }, [mealTime, totalKcal, typePicked]);
@@ -167,7 +168,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
       timestamp,
       time: timestamp.slice(11),
       type: mealType,
-      name: mealName.trim() || items.map((i) => i.name).join(', '),
+      name: mealName.trim() || autoName, // the same name the screen shows
       source: photo ? 'photo' : 'manual',
       note,
       items: mealItems,
@@ -225,8 +226,9 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
               {whenLabel(mealTime)}
             </button>
           </div>
-          <button class="text-btn meal-name" onClick={() => setEditor({ kind: 'mealName' })}>
-            {mealName || 'Name this meal'}
+          {/* Until you name the meal, it's called after its first food (shown greyed). */}
+          <button class={`text-btn meal-name${mealName ? '' : ' auto'}`} onClick={() => setEditor({ kind: 'mealName' })}>
+            {mealName || autoName || 'Name this meal'}
           </button>
 
           {editor.kind === 'type' && (
@@ -247,6 +249,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
             <TextEditor
               label="Meal name"
               value={mealName}
+              placeholder={autoName}
               onDone={(v) => { setMealName(v); setEditor({ kind: 'none' }); }}
             />
           )}
@@ -395,14 +398,14 @@ function ItemRow({ item, editor, setEditor, onGrams, onRename, onDelete }: {
 }
 
 /** A text field with a Done button (Enter also works). */
-function TextEditor({ label, value, onDone }: { label: string; value: string; onDone: (v: string) => void }) {
+function TextEditor({ label, value, placeholder, onDone }: { label: string; value: string; placeholder?: string; onDone: (v: string) => void }) {
   const [text, setText] = useState(value);
   return (
     <form class="inline-field" onSubmit={(e) => { e.preventDefault(); onDone(text.trim()); }}>
       <div class="field">
         <label>
           {label}
-          <input value={text} onInput={(e) => setText(e.currentTarget.value)} autoFocus />
+          <input value={text} placeholder={placeholder} onInput={(e) => setText(e.currentTarget.value)} autoFocus />
         </label>
       </div>
       <button class="text-btn" type="submit">Done</button>
@@ -512,6 +515,21 @@ function AddFood({ settings, onAdd, onCancel }: {
     onAdd(toReviewItem({ name: f.name.trim(), confidence, ...values }));
   }
 
+  // ½× / 1½× / 2×: multiplies the grams and every number already filled in
+  // (e.g. "Apple" estimated at 150 g, then 2× for two apples).
+  function multiply(x: number) {
+    const times = (v: string, round: (v: number) => string) => (v.trim() === '' || isNaN(n(v)) ? v : round(n(v) * x));
+    const whole = (v: number) => String(Math.round(v));
+    setF((prev) => ({
+      ...prev,
+      grams: times(prev.grams, whole),
+      kcal: times(prev.kcal, whole),
+      protein_g: times(prev.protein_g, one),
+      fat_g: times(prev.fat_g, one),
+      carbs_g: times(prev.carbs_g, one),
+    }));
+  }
+
   // Ask Gemini about the food and fill in the number fields.
   async function estimate() {
     const grams = n(f.grams);
@@ -539,7 +557,9 @@ function AddFood({ settings, onAdd, onCancel }: {
       }));
       setConfidence(item.confidence);
     } catch (err) {
-      setError(geminiMessage(err));
+      // (The usual offline line mentions the photo; there's none here.)
+      const offline = err instanceof GeminiError && err.kind === 'offline';
+      setError(offline ? 'No internet. Type the numbers, or Estimate again when online.' : geminiMessage(err));
     } finally {
       setEstimating(false);
     }
@@ -569,6 +589,16 @@ function AddFood({ settings, onAdd, onCancel }: {
         {numberField('fat_g', 'Fat g')}
         {numberField('carbs_g', 'Carbs g')}
       </div>
+      {/* The portion chips appear once there are grams to multiply. */}
+      {n(f.grams) > 0 && (
+        <div class="chips">
+          {[0.5, 1.5, 2].map((x) => (
+            <button class="chip" type="button" onClick={() => { tick(); multiply(x); }}>
+              {x === 0.5 ? '½×' : x === 1.5 ? '1½×' : '2×'}
+            </button>
+          ))}
+        </div>
+      )}
       {error && <p class="status error">{error}</p>}
       <div class="row-actions">
         <button class="btn-small" type="submit" disabled={estimating}>Add</button>
