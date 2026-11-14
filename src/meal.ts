@@ -28,12 +28,19 @@ export type ReviewItem = FoodItem & {
 export const MEAL_TYPES = ['Breakfast', 'Lunch', 'Dinner', 'Snack'] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
-/** Guesses the meal type from the time of day (phone clock). */
-export function mealTypeFor(d: Date = new Date()): MealType {
+/** Below this, a meal at lunch or dinner time counts as a snack (a banana isn't dinner). */
+const SNACK_KCAL = 250;
+
+/**
+ * Guesses the meal type from the time of day (phone clock) and, once foods
+ * are known, their total kcal: small meals at lunch or dinner time are Snacks.
+ */
+export function mealTypeFor(d: Date = new Date(), kcal = 0): MealType {
   const minutes = d.getHours() * 60 + d.getMinutes();
+  const small = kcal > 0 && kcal < SNACK_KCAL;
   if (minutes >= 5 * 60 && minutes < 10 * 60 + 30) return 'Breakfast';
-  if (minutes >= 11 * 60 + 30 && minutes < 14 * 60 + 30) return 'Lunch';
-  if (minutes >= 17 * 60 + 30 && minutes < 21 * 60 + 30) return 'Dinner';
+  if (minutes >= 11 * 60 + 30 && minutes < 14 * 60 + 30) return small ? 'Snack' : 'Lunch';
+  if (minutes >= 17 * 60 + 30 && minutes < 21 * 60 + 30) return small ? 'Snack' : 'Dinner';
   return 'Snack';
 }
 

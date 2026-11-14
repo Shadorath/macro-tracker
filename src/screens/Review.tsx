@@ -137,10 +137,14 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
 
   function changeTime(d: Date) {
     const now = new Date();
-    const t = d > now ? now : d; // no meals from the future
-    setMealTime(t);
-    if (!typePicked) setMealType(mealTypeFor(t));
+    setMealTime(d > now ? now : d); // no meals from the future
   }
+
+  // Until you pick a type yourself, keep guessing it from the time and size.
+  const totalKcal = items.reduce((sum, i) => sum + i.kcal, 0);
+  useEffect(() => {
+    if (!typePicked) setMealType(mealTypeFor(mealTime, totalKcal));
+  }, [mealTime, totalKcal, typePicked]);
 
   // Sends the meal to the sheet. On success the app goes back to Today;
   // on failure everything stays here and a one-line error explains why.
@@ -290,6 +294,12 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
 
       <div class="bottom-bar">
         {saveError && <p class="status error" role="alert">{saveError}</p>}
+        {/* Say why Save is off, instead of a silently disabled button */}
+        {!saveError && phase.kind === 'ready' && !items.length && (
+          <p class="status">
+            {editor.kind === 'add' ? 'Tap Add to put the food in this meal, then Save.' : 'Add at least one food to save.'}
+          </p>
+        )}
         <button class="btn-primary" onClick={save} disabled={phase.kind !== 'ready' || !items.length || saving}>
           {saving ? 'Saving…' : saveError ? 'Retry save' : 'Save'}
         </button>
@@ -561,7 +571,7 @@ function AddFood({ settings, onAdd, onCancel }: {
       </div>
       {error && <p class="status error">{error}</p>}
       <div class="row-actions">
-        <button class="text-btn" type="submit" disabled={estimating}>Add</button>
+        <button class="btn-small" type="submit" disabled={estimating}>Add</button>
         <button class="text-btn" type="button" onClick={estimate} disabled={estimating}>
           {estimating ? 'Estimating…' : 'Estimate'}
         </button>

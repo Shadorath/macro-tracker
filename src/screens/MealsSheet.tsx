@@ -74,7 +74,7 @@ export function MealsSheet({ day, onClose, onAddManually, onPastDays, onDelete }
 
         <div class="sheet-actions">
           <button class="primary" onClick={onAddManually}>Add manually</button>
-          <button class="quiet" onClick={onPastDays}>Past days ›</button>
+          <button class="primary" onClick={onPastDays}>Past days ›</button>
         </div>
       </section>
     </div>

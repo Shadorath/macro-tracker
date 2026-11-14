@@ -148,6 +148,19 @@ details .field { margin-bottom: 8px; }
 }
 
 .text-btn { min-height: 48px; font-size: 15px; font-weight: 500; }
+
+/* Small solid button, for the main action inside a form (e.g. Add food → Add) */
+.btn-small {
+  min-height: 48px;
+  min-width: 88px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: var(--ink);
+  color: var(--on-ink);
+  font-size: 15px;
+  font-weight: 500;
+  text-align: center;
+}
 .text-btn.quiet { color: var(--quiet); font-weight: 400; }
 
 /* Bottom area that holds the main button, stays visible while scrolling */
@@ -406,7 +419,7 @@ details .field { margin-bottom: 8px; }
 .split-helper { display: flex; flex-direction: column; gap: 8px; }
 .split-helper .hint { margin: 8px 0 0; }
 
-.row-actions { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; }
 
 .meal-total {
   display: flex;
