@@ -13,10 +13,11 @@
  *   POST requests and always go to the network. So is the app's
  *   "new version?" check, which asks with cache: 'no-store'.
  *
- * Change CACHE when this file changes, so old saved files are cleared.
+ * Change CACHE when this file, the manifest or an icon changes, so old saved
+ * files are cleared (v3: dark manifest colours).
  */
 
-const CACHE = 'macro-tracker-v2';
+const CACHE = 'macro-tracker-v3';
 const SHELL = ['./', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 const SLOW_MS = 3000;
 
