@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Sends a meal photo to the Google Gemini API and gets back a list of foods
  * with grams, kcal and macros as JSON.
  *
@@ -13,7 +13,8 @@ import { FALLBACK_MODEL } from './settings';
 import type { Confidence, FoodItem } from './meal';
 
 const API = 'https://generativelanguage.googleapis.com/v1beta/models';
-const ATTEMPT_TIMEOUT_MS = 40_000; // per model; then we try the fallback
+const MAIN_TIMEOUT_MS = 20_000;     // main model; slower than this -> try the fallback
+const FALLBACK_TIMEOUT_MS = 40_000; // the fallback gets a little longer
 
 const PROMPT =
   'You are a nutrition estimator. Identify every distinct food or drink in the photo. ' +
@@ -82,30 +83,67 @@ type Options = {
 
 /** Analyses one photo. Throws GeminiError with a one-line message on failure. */
 export async function analyzePhoto(opts: Options): Promise<Analysis> {
+  const parts: object[] = [{ inlineData: { mimeType: 'image/jpeg', data: opts.imageBase64 } }];
+  if (opts.note?.trim()) parts.push({ text: `Note about this meal: ${opts.note.trim()}` });
+  return withFallback(opts, (model, ms) => callModel(model, opts.key, PROMPT, parts, ms, opts.signal));
+}
+
+const ESTIMATE_PROMPT =
+  'You are a nutrition estimator. Estimate the calories, protein, fat and carbohydrates of the food ' +
+  'the user names, using typical values for European home cooking. Return exactly one item. ' +
+  'If a portion in grams is given, use it; otherwise use a typical single portion. ' +
+  'If unsure, give your best estimate and lower the confidence.';
+
+/**
+ * "Estimate" in Add food: asks Gemini about a food by name (no photo).
+ * When grams are given, the result is for exactly that many grams.
+ */
+export async function estimateFood(opts: {
+  key: string;
+  model: string;
+  name: string;
+  grams?: number;
+  signal?: AbortSignal;
+}): Promise<FoodItem> {
+  const portion = opts.grams ? `Portion: ${opts.grams} g.` : 'Portion: a typical single portion.';
+  const parts = [{ text: `Food: ${opts.name}. ${portion}` }];
+  const result = await withFallback(opts, (model, ms) => callModel(model, opts.key, ESTIMATE_PROMPT, parts, ms, opts.signal));
+  const item = result.items[0];
+  if (!item) throw fail('bad');
+
+  // Keep the grams you typed; scale Gemini's numbers to them if it used another amount.
+  if (opts.grams && item.grams > 0 && item.grams !== opts.grams) {
+    const k = opts.grams / item.grams;
+    return { ...item, grams: opts.grams, kcal: item.kcal * k, protein_g: item.protein_g * k, fat_g: item.fat_g * k, carbs_g: item.carbs_g * k };
+  }
+  return { ...item, grams: opts.grams || item.grams };
+}
+
+/** Tries the chosen model; on 429, busy or slow, tries the fallback model once. */
+async function withFallback<T>(opts: { key: string; model: string }, run: (model: string, timeoutMs: number) => Promise<T>): Promise<T> {
   if (!opts.key) throw new GeminiError('key', 'Add your Gemini API key in Settings.');
   try {
-    return await callModel(opts.model, opts);
+    return await run(opts.model, opts.model === FALLBACK_MODEL ? FALLBACK_TIMEOUT_MS : MAIN_TIMEOUT_MS);
   } catch (err) {
     const retry = err instanceof GeminiError && ['limit', 'busy', 'timeout'].includes(err.kind);
     if (!retry || opts.model === FALLBACK_MODEL) throw err;
-    return await callModel(FALLBACK_MODEL, opts);
+    return await run(FALLBACK_MODEL, FALLBACK_TIMEOUT_MS);
   }
 }
 
-async function callModel(model: string, opts: Options): Promise<Analysis> {
-  const parts: object[] = [{ inlineData: { mimeType: 'image/jpeg', data: opts.imageBase64 } }];
-  if (opts.note?.trim()) parts.push({ text: `Note about this meal: ${opts.note.trim()}` });
-
+/** One generateContent request to one model; returns the checked answer. */
+async function callModel(model: string, key: string, prompt: string, parts: object[], timeoutMs: number, userSignal?: AbortSignal): Promise<Analysis> {
   const body = {
-    systemInstruction: { parts: [{ text: PROMPT }] },
+    systemInstruction: { parts: [{ text: prompt }] },
     contents: [{ role: 'user', parts }],
     generationConfig: {
       responseFormat: { text: { mimeType: 'APPLICATION_JSON', schema: SCHEMA } },
     },
   };
+  const opts = { key, signal: userSignal };
 
-  // Stop after 40 s, or immediately when Cancel is pressed.
-  const timeout = AbortSignal.timeout(ATTEMPT_TIMEOUT_MS);
+  // Stop after the time limit, or immediately when Cancel is pressed.
+  const timeout = AbortSignal.timeout(timeoutMs);
   const signal = opts.signal ? AbortSignal.any([opts.signal, timeout]) : timeout;
 
   let response: Response;
@@ -139,7 +177,7 @@ function kindForStatus(status: number, text: string): GeminiErrorKind {
   if (status === 429) return 'limit';
   if (status === 401 || status === 403) return 'key';
   if (status === 400 && /api key/i.test(text)) return 'key';
-  if (status === 404) return 'key'; // unknown model name – also fixed in Settings
+  if (status === 404) return 'key'; // unknown model name â€“ also fixed in Settings
   if (status >= 500) return 'busy';
   return 'bad';
 }

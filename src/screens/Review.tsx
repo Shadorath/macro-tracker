@@ -12,10 +12,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Photo } from '../photo';
 import type { Settings } from '../settings';
-import { analyzePhoto, geminiMessage, GeminiError, type GeminiErrorKind } from '../gemini';
+import { analyzePhoto, estimateFood, geminiMessage, GeminiError, type GeminiErrorKind } from '../gemini';
 import {
   MEAL_TYPES, mealTypeFor, pfc, toReviewItem, totalsOf, withGrams,
-  type MealType, type ReviewItem,
+  type FoodItem, type MealType, type ReviewItem,
 } from '../meal';
 
 type Phase =
@@ -190,6 +190,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
 
           {editor.kind === 'add' && (
             <AddFood
+              settings={settings}
               onAdd={(item) => { setItems((list) => [...list, item]); setEditor({ kind: 'none' }); }}
               onCancel={() => setEditor({ kind: 'none' })}
             />
@@ -357,24 +358,86 @@ function RecheckEditor({ onRecheck }: { onRecheck: (note: string) => void }) {
   );
 }
 
-/** "+ Add food": type a food in by hand. */
-function AddFood({ onAdd, onCancel }: { onAdd: (item: ReviewItem) => void; onCancel: () => void }) {
+/**
+ * "+ Add food": type a food in by hand. "Estimate" asks Gemini for the
+ * kcal and macros of the named food (and grams, if empty); you can adjust
+ * them before tapping Add.
+ */
+function AddFood({ settings, onAdd, onCancel }: {
+  settings: Settings;
+  onAdd: (item: ReviewItem) => void;
+  onCancel: () => void;
+}) {
   const [f, setF] = useState({ name: '', grams: '', kcal: '', protein_g: '', fat_g: '', carbs_g: '' });
   const [error, setError] = useState('');
+  const [estimating, setEstimating] = useState(false);
+  const [confidence, setConfidence] = useState<FoodItem['confidence']>(''); // from Gemini, if estimated
+  // After Estimate, the values per gram, so changing grams rescales the numbers.
+  // Cleared as soon as you type a kcal or macro yourself.
+  const [perGram, setPerGram] = useState<{ kcal: number; protein_g: number; fat_g: number; carbs_g: number } | null>(null);
+  const n = (v: string) => (v.trim() === '' ? 0 : Number(v.replace(',', '.')));
+  const one = (v: number) => String(Math.round(v * 10) / 10);
+
   // Always build on the latest values (prev), so quick changes never overwrite each other.
   const set = (k: keyof typeof f) => (e: Event) => {
     const value = (e.currentTarget as HTMLInputElement).value;
+    if (k === 'grams' && perGram && n(value) > 0) {
+      const g = n(value);
+      setF((prev) => ({
+        ...prev,
+        grams: value,
+        kcal: String(Math.round(perGram.kcal * g)),
+        protein_g: one(perGram.protein_g * g),
+        fat_g: one(perGram.fat_g * g),
+        carbs_g: one(perGram.carbs_g * g),
+      }));
+      return;
+    }
+    if (k !== 'grams' && k !== 'name') setPerGram(null); // you typed a number yourself
     setF((prev) => ({ ...prev, [k]: value }));
   };
-  const n = (v: string) => (v.trim() === '' ? 0 : Number(v.replace(',', '.')));
 
   function submit(e: Event) {
     e.preventDefault();
     const values = { grams: n(f.grams), kcal: n(f.kcal), protein_g: n(f.protein_g), fat_g: n(f.fat_g), carbs_g: n(f.carbs_g) };
     if (!f.name.trim()) return setError('Give the food a name.');
+    if (f.kcal.trim() === '') return setError('Enter the kcal, or tap Estimate.');
     if (Object.values(values).some((v) => isNaN(v) || v < 0)) return setError('Use numbers only, like 150 or 12.5.');
     if (!values.grams) return setError('Enter the grams.');
-    onAdd(toReviewItem({ name: f.name.trim(), confidence: '', ...values }));
+    onAdd(toReviewItem({ name: f.name.trim(), confidence, ...values }));
+  }
+
+  // Ask Gemini about the food and fill in the number fields.
+  async function estimate() {
+    const grams = n(f.grams);
+    if (!f.name.trim()) return setError('Type the food first, then tap Estimate.');
+    if (isNaN(grams) || grams < 0) return setError('Use numbers only, like 150 or 12.5.');
+    setError('');
+    setEstimating(true);
+    try {
+      const item = await estimateFood({ key: settings.geminiKey, model: settings.model, name: f.name.trim(), grams: grams || undefined });
+      if (item.grams > 0) {
+        setPerGram({
+          kcal: item.kcal / item.grams,
+          protein_g: item.protein_g / item.grams,
+          fat_g: item.fat_g / item.grams,
+          carbs_g: item.carbs_g / item.grams,
+        });
+      }
+      setF((prev) => ({
+        ...prev,
+        grams: String(Math.round(item.grams)),
+        kcal: String(Math.round(item.kcal)),
+        protein_g: one(item.protein_g),
+        fat_g: one(item.fat_g),
+        carbs_g: one(item.carbs_g),
+      }));
+      setConfidence(item.confidence);
+    } catch (err) {
+      setError(geminiMessage(err));
+    } finally {
+      setEstimating(false);
+    }
   }
 
   const numberField = (key: keyof typeof f, label: string) => (
@@ -403,7 +466,10 @@ function AddFood({ onAdd, onCancel }: { onAdd: (item: ReviewItem) => void; onCan
       </div>
       {error && <p class="status error">{error}</p>}
       <div class="row-actions">
-        <button class="text-btn" type="submit">Add</button>
+        <button class="text-btn" type="submit" disabled={estimating}>Add</button>
+        <button class="text-btn" type="button" onClick={estimate} disabled={estimating}>
+          {estimating ? 'Estimating…' : 'Estimate'}
+        </button>
         <button class="text-btn quiet" type="button" onClick={onCancel}>Cancel</button>
       </div>
     </form>
