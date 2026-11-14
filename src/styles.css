@@ -271,6 +271,7 @@ details .field { margin-bottom: 8px; }
 .meal-items li { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--quiet); }
 .meal-item-top { display: flex; justify-content: space-between; gap: 12px; color: var(--ink); }
 .meal-item-pfc { font-size: 13px; }
+.delete-meal { margin: -4px 0 4px; }
 .sheet-actions { display: flex; justify-content: space-between; margin-top: 8px; font-size: 15px; }
 .sheet-actions button { min-height: 48px; }
 .sheet-actions .primary { font-weight: 500; }
@@ -278,6 +279,15 @@ details .field { margin-bottom: 8px; }
 
 @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ---------- Past days ---------- */
+.past-days { gap: 0; padding-top: 4px; }
+.past-day { border-bottom: 1px solid var(--divider); }
+.past-day-main { width: 100%; display: flex; flex-direction: column; gap: 4px; padding: 14px 0; }
+.past-day-top { display: flex; justify-content: space-between; gap: 12px; font-size: 16px; }
+.past-day-pfc { font-size: 13px; color: var(--quiet); }
+.past-day-meals { padding: 0 0 8px 12px; border-left: 2px solid var(--divider); margin-bottom: 12px; }
+.past-days > .hint { margin-top: 16px; }
 
 /* ---------- Toast ---------- */
 .toast {
@@ -392,6 +402,9 @@ details .field { margin-bottom: 8px; }
 
 .add-food { display: flex; flex-direction: column; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--divider); }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.split-helper { display: flex; flex-direction: column; gap: 8px; }
+.split-helper .hint { margin: 8px 0 0; }
 
 .row-actions { display: flex; flex-wrap: wrap; gap: 0 24px; }
 

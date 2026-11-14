@@ -20,14 +20,15 @@ import { TodayScreen } from './screens/Today';
 import { SettingsScreen } from './screens/Settings';
 import { ReviewScreen } from './screens/Review';
 import { MealsSheet } from './screens/MealsSheet';
+import { PastDaysScreen, type DeleteHandlers } from './screens/PastDays';
 import { Toast, type ToastData } from './components/Toast';
 import { hasSheet, loadSettings } from './settings';
 import { preparePhoto, type Photo } from './photo';
 import { dateString } from './dates';
 import { cacheDay, emptyDay, loadCachedDay, withMeal, withoutMeal } from './day';
-import { addMeal, deleteMeal, errorMessage, getDay, SheetError, type DayResponse, type Meal } from './sheet';
+import { addMeal, deleteMeal, errorMessage, getDay, SheetError, type DayResponse, type Meal, type Totals } from './sheet';
 
-type Screen = 'today' | 'settings' | 'review' | 'meals';
+type Screen = 'today' | 'settings' | 'review' | 'meals' | 'past';
 
 /** "yesterday" or "12 Nov" for a "2026-11-12" date. */
 function dayLabel(date: string): string {
@@ -157,6 +158,50 @@ export function App() {
     }
   }
 
+  /**
+   * "Delete meal" (in Today's meals or Past days): removes the meal from the
+   * screen at once, deletes it in the sheet, and offers Undo for 5 s, which
+   * saves it again. `handlers` update the screen the meal was deleted from.
+   */
+  async function deleteWithUndo(meal: Meal, handlers: DeleteHandlers) {
+    localChanges.current++;
+    handlers.remove();
+    try {
+      await deleteMeal(loadSettings(), meal.id);
+    } catch (err) {
+      handlers.restore(); // still in the sheet, so show it again
+      setToast({ id: Date.now(), text: `Couldn't delete. ${errorMessage(err)}` });
+      return;
+    }
+    navigator.vibrate?.(15);
+    setToast({
+      id: Date.now(),
+      text: 'Meal deleted',
+      undo: async () => {
+        localChanges.current++;
+        handlers.restore();
+        try {
+          await addMeal(loadSettings(), meal);
+        } catch (err) {
+          handlers.remove();
+          setToast({ id: Date.now(), text: `Couldn't undo. ${errorMessage(err)}` });
+        }
+      },
+    });
+  }
+
+  // Delete from Today's meals: today's numbers change straight away.
+  const deleteTodayMeal = (meal: Meal) => deleteWithUndo(meal, {
+    remove: () => setDay(withoutMeal(dayRef.current, meal.id)),
+    restore: () => setDay(withMeal(dayRef.current, meal)),
+  });
+
+  // New goals saved in Settings: show them on Today straight away.
+  function goalsSaved(goals: Totals) {
+    localChanges.current++;
+    setDay({ ...dayRef.current, goals });
+  }
+
   const settings = loadSettings();
 
   return (
@@ -173,8 +218,17 @@ export function App() {
           onCamera={openCamera}
         />
       )}
-      {screen === 'meals' && <MealsSheet day={day} onClose={close} onAddManually={openManual} />}
-      {screen === 'settings' && <SettingsScreen onClose={close} />}
+      {screen === 'meals' && (
+        <MealsSheet
+          day={day}
+          onClose={close}
+          onAddManually={openManual}
+          onPastDays={() => open('past')}
+          onDelete={deleteTodayMeal}
+        />
+      )}
+      {screen === 'past' && <PastDaysScreen onClose={close} onDelete={deleteWithUndo} />}
+      {screen === 'settings' && <SettingsScreen onClose={close} onGoalsSaved={goalsSaved} />}
       {screen === 'review' && (
         <ReviewScreen
           key={review.id}

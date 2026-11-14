@@ -122,6 +122,19 @@ export function addMeal(settings: Conn, meal: Meal): Promise<{ mealId: string }>
   });
 }
 
+/** One day in Past days: totals and how many meals. */
+export type DaySummary = Totals & { date: string; meals: number };
+
+/** Daily totals between two dates (both included), newest first. */
+export function getRange(settings: Conn, from: string, to: string): Promise<{ days: DaySummary[]; goals: Totals }> {
+  return callSheet(settings, 'getRange', { from, to });
+}
+
+/** Writes the four daily goals to the Goals tab. */
+export function setGoals(settings: Conn, goals: Totals): Promise<{ goals: Totals }> {
+  return callSheet(settings, 'setGoals', { goals });
+}
+
 /** Removes all Log rows of one meal. */
 export function deleteMeal(settings: Conn, mealId: string): Promise<{ deleted: number }> {
   return callSheet(settings, 'deleteMeal', { mealId });

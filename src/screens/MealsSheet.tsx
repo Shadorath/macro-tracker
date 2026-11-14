@@ -2,24 +2,26 @@
  * Today's meals: a sheet that slides up over Today after tapping the
  * calories card (design/today-concept.html, middle frame).
  *
- * - Each meal: type and time, meal name, kcal; tap to see its items.
- * - "Add manually" opens Review without a photo.
+ * - Each meal: type and time, meal name, kcal; tap to see its foods
+ *   (with P / F / C) and "Delete meal".
+ * - "Add manually" opens Review without a photo; "Past days ›" opens the
+ *   last 7 days.
  * - Closes with a swipe down, a tap on the dimmed area, or Back.
- *   (Delete meal and Past days come in milestone 5.)
  */
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { DayResponse } from '../sheet';
-import { pfc } from '../meal';
+import type { DayResponse, Meal } from '../sheet';
+import { MealList } from '../components/MealList';
 
 type Props = {
   day: DayResponse;
   onClose: () => void;
   onAddManually: () => void;
+  onPastDays: () => void;
+  onDelete: (meal: Meal) => void;
 };
 
-export function MealsSheet({ day, onClose, onAddManually }: Props) {
-  const [openId, setOpenId] = useState<string | null>(null);
+export function MealsSheet({ day, onClose, onAddManually, onPastDays, onDelete }: Props) {
   const [dragY, setDragY] = useState(0);
   const startY = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -67,38 +69,12 @@ export function MealsSheet({ day, onClose, onAddManually }: Props) {
         </div>
 
         <div class="sheet-list" ref={listRef}>
-          {!day.meals.length && <p class="hint">Nothing logged yet today.</p>}
-          {day.meals.map((meal) => {
-            const open = openId === meal.id;
-            return (
-              <div class="meal" key={meal.id}>
-                <button class="meal-main" onClick={() => setOpenId(open ? null : meal.id)} aria-expanded={open}>
-                  <div>
-                    <small>{meal.type} · {meal.time}</small>
-                    {meal.name}
-                  </div>
-                  <span>{Math.round(meal.totals.kcal)} kcal</span>
-                </button>
-                {open && (
-                  <ul class="meal-items">
-                    {meal.items.map((item) => (
-                      <li>
-                        <div class="meal-item-top">
-                          <span>{item.name} · {Math.round(item.grams)} g</span>
-                          <span>{Math.round(item.kcal)} kcal</span>
-                        </div>
-                        <span class="meal-item-pfc">{pfc(item)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+          <MealList meals={day.meals} empty="Nothing logged yet today." onDelete={onDelete} />
         </div>
 
         <div class="sheet-actions">
           <button class="primary" onClick={onAddManually}>Add manually</button>
+          <button class="quiet" onClick={onPastDays}>Past days ›</button>
         </div>
       </section>
     </div>
