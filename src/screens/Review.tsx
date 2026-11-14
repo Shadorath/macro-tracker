@@ -301,39 +301,26 @@ function ItemRow({ item, editor, setEditor, onGrams, onRename, onDelete }: {
 
       {nameOpen && (
         <div class="inline-editor">
-          {/* Delete sits next to Done, so the keyboard or the Save bar can't hide it */}
-          <TextEditor
-            label="Food name"
-            value={item.name}
-            autoFocus={false}
-            onDone={(v) => { if (v) onRename(v); close(); }}
-            extra={<button class="text-btn" type="button" onClick={onDelete}>Delete</button>}
-          />
+          <TextEditor label="Food name" value={item.name} onDone={(v) => { if (v) onRename(v); close(); }} />
+          <button class="text-btn quiet" onClick={onDelete}>Delete this food</button>
         </div>
       )}
     </div>
   );
 }
 
-/** A text field with a Done button (Enter also works), plus an optional extra button. */
-function TextEditor({ label, value, onDone, autoFocus = true, extra }: {
-  label: string;
-  value: string;
-  onDone: (v: string) => void;
-  autoFocus?: boolean; // open the keyboard right away?
-  extra?: preact.ComponentChildren;
-}) {
+/** A text field with a Done button (Enter also works). */
+function TextEditor({ label, value, onDone }: { label: string; value: string; onDone: (v: string) => void }) {
   const [text, setText] = useState(value);
   return (
     <form class="inline-field" onSubmit={(e) => { e.preventDefault(); onDone(text.trim()); }}>
       <div class="field">
         <label>
           {label}
-          <input value={text} onInput={(e) => setText(e.currentTarget.value)} autoFocus={autoFocus} />
+          <input value={text} onInput={(e) => setText(e.currentTarget.value)} autoFocus />
         </label>
       </div>
       <button class="text-btn" type="submit">Done</button>
-      {extra}
     </form>
   );
 }
