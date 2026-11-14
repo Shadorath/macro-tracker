@@ -385,6 +385,13 @@ details .field { margin-bottom: 8px; }
 .toast button { min-height: 48px; padding: 0 12px; font-weight: 700; color: var(--on-ink); }
 
 /* ---------- Review ---------- */
+/* Always taller than the screen, like Settings. Manual entry otherwise fits
+   on the screen and only becomes scrollable once the keyboard opens, and
+   Chrome on Android then ignores the first swipe (tested on the phone; pages
+   that can already scroll before the keyboard, like Settings, don't have
+   this). The extra space sits above the Save bar and only shows when you
+   scroll to the very bottom. */
+.screen.review { min-height: 140dvh; }
 .thumb {
   width: 100%;
   max-height: 220px;
