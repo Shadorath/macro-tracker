@@ -25,11 +25,11 @@ A single-user installable web app (PWA) for Istok's Android phone: photograph a 
 
 | File | What it holds |
 | --- | --- |
-| `src/app.tsx` | Which screen is shown, Back handling, today's data, save / delete / undo, swiping days, the update note |
-| `src/screens/` | `Today`, `Review`, `MealsSheet`, `PastDays`, `Settings` |
-| `src/components/` | `AddFood` (the Add food form), `ReviewEditors` (food row + inline editors), `MealList`, `CameraButton`, `Toast` |
+| `src/app.tsx` | Which screen is shown, Back handling, today's data, save / edit / delete / undo, swiping days, meals shown or hidden, the update note |
+| `src/screens/` | `Today` (with the meals line), `Review` (also Edit meal), `Settings` |
+| `src/components/` | `AddFood` (the Add food form), `ReviewEditors` (food row + inline editors), `MealList` (the meal cards on Today), `CameraButton` (and the + button), `Toast` |
 | `src/gemini.ts` | Prompt, schema, the Gemini call with fallback model, error messages |
-| `src/sheet.ts` | The five Apps Script actions and their error messages |
+| `src/sheet.ts` | The Apps Script actions the app uses and their error messages |
 | `src/meal.ts`, `day.ts`, `past.ts` | Meal maths and type guess; today's cached data; the preloaded last 7 days |
 | `src/settings.ts`, `theme.ts`, `keyboard.ts`, `update.ts`, `photo.ts`, `dates.ts` | Small helpers, each explained at its top |
 | `src/styles.css` | All styles; colour tokens for both themes at the top |

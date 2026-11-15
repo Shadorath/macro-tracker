@@ -52,10 +52,3 @@ export function cachePast(past: PastDays): void {
 export function pastIsStale(past: PastDays): boolean {
   return Date.now() - past.loadedAt > MAX_AGE_MS || pastDates().some((d) => !past.days[d]);
 }
-
-/** "Fri 13 Nov" for "2026-11-13". */
-export function shortDay(date: string): string {
-  const [y, m, d] = date.split('-').map(Number);
-  const day = new Date(y, m - 1, d);
-  return `${day.toLocaleDateString('en-GB', { weekday: 'short' })} ${d} ${day.toLocaleDateString('en-GB', { month: 'short' })}`;
-}

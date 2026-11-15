@@ -15,7 +15,7 @@
  *   3. mt.mode = 'ok'       what the fake internet does, see MODES below
  *   4. mt.photo()           acts like taking a photo
  *      mt.swipe(120)        swipe right on Today (-120 = left)
- *      mt.tap('Add manually')   taps the button with exactly that text
+ *      mt.tap('Edit')      taps the button with exactly that text
  *      mt.calls             the requests the app made (action or model name)
  *   5. mt.clear()           removes all test data from the tab
  */
@@ -78,11 +78,6 @@
       mt.calls.push(body.action + (body.date ? ' ' + body.date : ''));
       const all = days();
       if (body.action === 'getDay') return json({ ok: true, ...(all[body.date] || fakeDay(body.date, 0, 0, 0, 0, 0)) });
-      if (body.action === 'getRange') {
-        const list = Object.values(all).filter((d) => d.date >= body.from && d.date <= body.to && d.meals.length)
-          .map((d) => ({ date: d.date, ...d.totals, meals: d.meals.length }));
-        return json({ ok: true, days: list.sort((a, b) => b.date.localeCompare(a.date)), goals: GOALS });
-      }
       if (body.action === 'setGoals') return json({ ok: true, goals: body.goals });
       if (body.action === 'deleteMeal') return json({ ok: true, deleted: 1 });
       return json({ ok: true, mealId: body.meal && body.meal.id });

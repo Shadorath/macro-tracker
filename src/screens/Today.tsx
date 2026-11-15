@@ -3,24 +3,28 @@
  * eat today?" at a glance.
  *
  * - Calories card: kcal eaten (big, so it rises together with the ring %),
- *   "680 kcal left of 2200" under it, a ring with the % eaten, and
- *   "Today's meals 3 ›". The whole card is one tap target that opens the
- *   meals sheet. Past the goal: "120 kcal over 2200", the eaten number in
- *   orange-red and a full ring. (Istok's change to the spec, which had the
- *   kcal left as the big number.)
+ *   "680 kcal left of 2200" under it and a ring with the % eaten. Numbers
+ *   only, it does nothing when tapped. Past the goal: "120 kcal over 2200",
+ *   the eaten number in orange-red and a full ring.
  * - Nutrients card: protein, carbs, fat as coloured bars with "112 g / 150 g".
  *   A bar stops at full; above 110 % the eaten value turns orange-red,
  *   except protein (going over is fine).
- * - The camera button, bottom centre.
+ * - The meals line ("Today's meals 4 ˅"), a slim card under Nutrients: tap it
+ *   to show or hide the day's meal cards right under it (components/MealList).
+ *   Whether they are shown is kept by the app, so they stay open while you
+ *   swipe between days and after Review.
+ * - The camera button, bottom centre, and the faint + (manual entry), bottom
+ *   right. Both float above the meal cards when the page scrolls.
  * - Swipe right to see the day before (up to 7 days back), left to go
  *   forward again. A past day looks the same, with its date at the top,
- *   "Today ›" instead of Settings, and no camera button. (Istok's request.)
+ *   "Today ›" instead of Settings, and no camera button or +.
  */
 
 import { useRef } from 'preact/hooks';
 import { longDate } from '../dates';
-import type { DayResponse } from '../sheet';
-import { CameraButton } from '../components/CameraButton';
+import type { DayResponse, Meal } from '../sheet';
+import { CameraButton, PlusButton } from '../components/CameraButton';
+import { MealList } from '../components/MealList';
 
 type Props = {
   day: DayResponse;       // the day shown: today or a past day
@@ -30,8 +34,12 @@ type Props = {
   connected: boolean;     // sheet URL and token are filled in
   syncError: string;      // last refresh failed (showing saved numbers)
   onOpenSettings: () => void;
-  onOpenMeals: () => void;
+  mealsOpen: boolean;     // the meal cards are shown
+  onToggleMeals: () => void;
+  onEditMeal: (meal: Meal) => void;
+  onDeleteMeal: (meal: Meal) => void;
   onCamera: () => void;
+  onManual: () => void;   // the + : manual entry
   onSwipe: (daysBack: 1 | -1) => void;
   onToday: () => void;
 };
@@ -45,7 +53,7 @@ function dayTitle(date: string): string {
   return longDate(new Date(y, m - 1, d));
 }
 
-export function TodayScreen({ day, isToday, loading, slide, connected, syncError, onOpenSettings, onOpenMeals, onCamera, onSwipe, onToday }: Props) {
+export function TodayScreen({ day, isToday, loading, slide, connected, syncError, onOpenSettings, mealsOpen, onToggleMeals, onEditMeal, onDeleteMeal, onCamera, onManual, onSwipe, onToday }: Props) {
   const goal = day.goals.kcal;
   const eaten = Math.round(day.totals.kcal);
   const left = goal - eaten;
@@ -55,7 +63,7 @@ export function TodayScreen({ day, isToday, loading, slide, connected, syncError
   const when = isToday ? 'today' : dayTitle(day.date);
 
   const label = `${eaten} kcal eaten ${isToday ? 'today' : `on ${when}`}, ${over ? `${-left} kcal over` : `${left} kcal left`}, `
-    + `${Math.round(pct * 100)} percent of goal. Show the meals`;
+    + `${Math.round(pct * 100)} percent of goal`;
 
   // A mostly sideways swipe of 50 px or more changes the day.
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -79,11 +87,11 @@ export function TodayScreen({ day, isToday, loading, slide, connected, syncError
           : <button class="to-today" onClick={onToday}>Today ›</button>}
       </div>
 
-      {/* The two cards slide in from the side the day came from. */}
+      {/* The cards slide in from the side the day came from. */}
       <div key={day.date} class={`day-cards${slide ? ` slide-${slide}` : ''}`}>
 
-      {/* Calories card: the whole card is one tap target */}
-      <button class="card calories" onClick={onOpenMeals} aria-label={label}>
+      {/* Calories card: numbers only */}
+      <section class="card calories" aria-label={label}>
         <div class="cal-row">
           <div class="cal-text">
             <span class="label">Calories</span>
@@ -106,11 +114,7 @@ export function TodayScreen({ day, isToday, loading, slide, connected, syncError
             <span>{Math.round(pct * 100)}%</span>
           </div>
         </div>
-        <div class="meals-row">
-          <span>{isToday ? "Today's meals" : 'Meals'}</span>
-          <span class="count">{mealCount} ›</span>
-        </div>
-      </button>
+      </section>
 
       {/* Nutrients card */}
       <section class="card macros" aria-label={`Nutrients ${when}`}>
@@ -119,6 +123,15 @@ export function TodayScreen({ day, isToday, loading, slide, connected, syncError
         <MacroRow name="Carbs" colour="var(--carbs)" eaten={day.totals.carbs_g} goal={day.goals.carbs_g} warns />
         <MacroRow name="Fat" colour="var(--fat)" eaten={day.totals.fat_g} goal={day.goals.fat_g} warns />
       </section>
+
+      {/* Meals line, and the meal cards under it while it is open */}
+      <div class="meals">
+        <button class="card meals-line" onClick={onToggleMeals} aria-expanded={mealsOpen}>
+          <span>{isToday ? "Today's meals" : 'Meals'}</span>
+          <span class="count">{mealCount} {mealsOpen ? '˄' : '˅'}</span>
+        </button>
+        {mealsOpen && <MealList meals={day.meals} goals={day.goals} onEdit={onEditMeal} onDelete={onDeleteMeal} />}
+      </div>
       </div>
 
       {loading && <p class="hint center">{syncError ? `Couldn't load this day. ${syncError}` : 'Loading this day…'}</p>}
@@ -126,6 +139,7 @@ export function TodayScreen({ day, isToday, loading, slide, connected, syncError
       {isToday && connected && syncError && <p class="hint center">{syncError} Showing saved numbers.</p>}
 
       {isToday && <CameraButton onClick={onCamera} />}
+      {isToday && <PlusButton onClick={onManual} />}
     </main>
   );
 }

@@ -46,7 +46,7 @@ Flow: Today screen → Take photo → Gemini estimates → Review and adjust →
 - Until I name a meal, it shows its first food's name in grey and is saved under that name.
 - "+ Add food" opens a form (food, grams, kcal, protein, fat, carbs). **Estimate** asks Gemini for the numbers from the name (and grams, if given); changing the grams afterwards rescales them until I type a number myself. ½× / 1½× / 2× chips multiply the grams and every filled number. Add needs a name, grams and kcal.
 - Manual entry (the + at the bottom right of Today) is this same screen without a photo, starting with the Add food form open.
-- **Editing a meal** (Edit on a meal card) opens this same screen filled with the saved meal: its type, time, name and foods, but no photo (photos aren't stored), so there is no thumbnail and no "Re-check with a note". The title reads "Edit meal". Save replaces the meal: the app saves the edited meal under a new meal ID, then deletes the old one, so no Apps Script change is needed. It keeps each food's source, confidence and the note. Toast: "Meal updated". If removing the old copy fails, both copies show, and the error line says to delete the old one. Cancel leaves the meal as it was.
+- **Editing a meal** (Edit on a meal card) opens this same screen filled with the saved meal: its type, time, name and foods, but no photo (photos aren't stored), so there is no thumbnail and no "Re-check with a note". The title reads "Edit meal". Save replaces the meal: the app saves the edited meal under a new meal ID, then deletes the old one, so no Apps Script change is needed. It keeps the meal's source (photo / manual; foods added while editing get it too, since the app keeps one source per meal), each food's confidence and the note. Toast: "Meal updated" (no Undo; Edit again to change it back). If removing the old copy fails, both copies show, and the toast says to delete the old one. Cancel leaves the meal as it was.
 - When Save is off, one line above it says why.
 
 ## UX pillars
@@ -274,9 +274,7 @@ A small static web app built with Vite and TypeScript, hosted free on GitHub Pag
 
 ## Status
 
-Version 1 was built in six milestones (sheet and script; app shell and Settings; photo → Gemini → Review; Save and Today; goals, Past days and manual entry; polish) and approved on Nov 15, 2026. Added since: swiping through the last 7 days on Today.
-
-**In progress (spec written, not built yet):** the meals show as cards on Today under their own "Today's meals" line (moved out of the calories card) instead of in a pop-up sheet, with small P / C / F bars, Edit and Delete; a faint + for manual entry; the meals sheet and the Past days screen are removed. Until it is built, the live app still works the old way. Remove this paragraph in the commit that ships it.
+Version 1 was built in six milestones (sheet and script; app shell and Settings; photo → Gemini → Review; Save and Today; goals, Past days and manual entry; polish) and approved on Nov 15, 2026. Added since: swiping through the last 7 days on Today; the meals as cards on Today under their own "Today's meals" line, with small P / C / F bars, Edit and Delete meal, and a faint + for manual entry (these replaced the meals sheet and the Past days screen).
 
 ## Out of scope and future ideas
 

@@ -10,6 +10,11 @@
  * meals eaten earlier. Changing it re-guesses the meal type unless you
  * picked one yourself.
  *
+ * Editing a saved meal (Edit on a meal card): the same screen, titled
+ * "Edit meal", filled with the meal's type, time, name and foods, but no
+ * photo (photos aren't stored), so no thumbnail and no "Re-check". The app
+ * decides what Save does (see saveMeal in app.tsx).
+ *
  * Small editors open inline under the thing you tapped (no pop-ups). They
  * and the food row live in components/ReviewEditors.tsx; the "+ Add food"
  * form is components/AddFood.tsx.
@@ -23,7 +28,7 @@ import { errorMessage } from '../sheet';
 import { dateString, timestampString } from '../dates';
 import { primeKeyboard } from '../keyboard';
 import { analyzePhoto, geminiMessage, GeminiError, type GeminiErrorKind } from '../gemini';
-import { MEAL_TYPES, mealTypeFor, pfc, toReviewItem, totalsOf, withGrams, type MealType, type ReviewItem } from '../meal';
+import { MEAL_TYPES, mealTypeFor, pfc, toReviewItem, totalsOf, withGrams, type FoodItem, type MealType, type ReviewItem } from '../meal';
 import { AddFood } from '../components/AddFood';
 import { ItemRow, RecheckEditor, TextEditor, TimeEditor, type Editor } from '../components/ReviewEditors';
 
@@ -36,6 +41,7 @@ type Props = {
   settings: Settings;
   photo: Photo | null;     // null for manual entry or when the photo couldn't be opened
   photoError?: string;
+  edit?: Meal;             // the saved meal being edited (Edit on a meal card)
   onCancel: () => void;
   onRetake: () => void;
   onOpenSettings: () => void;
@@ -52,23 +58,33 @@ function whenLabel(d: Date): string {
   return `${d.getDate()} ${d.toLocaleDateString('en-GB', { month: 'short' })} ${time}`;
 }
 
+/** "2026-11-14 12:35" → that moment as a Date (phone's clock). */
+function parseTimestamp(ts: string): Date {
+  const [y, m, d, h, min] = ts.split(/[- :]/).map(Number);
+  return new Date(y, m - 1, d, h, min);
+}
+
 /** Meal ID from the moment of saving, e.g. m-20261114-123512 (unique per save). */
 function newMealId(): string {
   return 'm-' + timestampString().replace(/[-:]/g, '').replace(' ', '-') + String(new Date().getSeconds()).padStart(2, '0');
 }
 
-export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, onOpenSettings, onSave }: Props) {
+export function ReviewScreen({ settings, photo, photoError, edit, onCancel, onRetake, onOpenSettings, onSave }: Props) {
   const [phase, setPhase] = useState<Phase>(() =>
     photoError ? { kind: 'error', message: photoError, errorKind: 'photo' }
     : photo ? { kind: 'analyzing' }
     : { kind: 'ready' });
-  const [mealTime, setMealTime] = useState(() => new Date());
-  const [mealType, setMealType] = useState<MealType>(() => mealTypeFor());
-  const [typePicked, setTypePicked] = useState(false); // you chose the type yourself
-  const [mealName, setMealName] = useState('');
-  const [items, setItems] = useState<ReviewItem[]>([]);
-  const [note, setNote] = useState('');          // Gemini's note
-  const [editor, setEditor] = useState<Editor>(() => (photo || photoError ? { kind: 'none' } : { kind: 'add' }));
+  // When editing, everything starts from the saved meal; otherwise from now.
+  const [mealTime, setMealTime] = useState(() => (edit ? parseTimestamp(edit.timestamp) : new Date()));
+  const [mealType, setMealType] = useState<MealType>(() => (edit ? edit.type as MealType : mealTypeFor()));
+  const [typePicked, setTypePicked] = useState(Boolean(edit)); // you chose the type yourself (a saved meal keeps its type)
+  // A saved meal named after its first food was never named by hand: keep it following the first food.
+  const [mealName, setMealName] = useState(() => (edit && edit.name !== edit.items[0]?.name ? edit.name : ''));
+  const [items, setItems] = useState<ReviewItem[]>(() => (edit
+    ? edit.items.map((i) => toReviewItem({ ...i, confidence: i.confidence as FoodItem['confidence'] }))
+    : []));
+  const [note, setNote] = useState(edit?.note ?? ''); // Gemini's note
+  const [editor, setEditor] = useState<Editor>(() => (photo || photoError || edit ? { kind: 'none' } : { kind: 'add' }));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const abortRef = useRef<AbortController | null>(null);
@@ -158,7 +174,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
       time: timestamp.slice(11),
       type: mealType,
       name: mealName.trim() || autoName, // the same name the screen shows
-      source: photo ? 'photo' : 'manual',
+      source: edit ? edit.source : photo ? 'photo' : 'manual', // an edited meal keeps its source
       note,
       items: mealItems,
       totals: { kcal: Math.round(t.kcal), protein_g: r1(t.protein_g), fat_g: r1(t.fat_g), carbs_g: r1(t.carbs_g) },
@@ -179,7 +195,7 @@ export function ReviewScreen({ settings, photo, photoError, onCancel, onRetake, 
   return (
     <main class="screen review">
       <div class="topbar">
-        <h1>Review</h1>
+        <h1>{edit ? 'Edit meal' : 'Review'}</h1>
         <button onClick={onCancel}>Cancel</button>
       </div>
 

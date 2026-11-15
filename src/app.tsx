@@ -4,10 +4,9 @@
  *
  * How Back works: opening a screen from Today adds a browser history entry
  * (history.pushState). Pressing Back removes it and fires "popstate", which
- * sends us back to Today. Moving from one screen to another (e.g. the meals
- * sheet to Review) replaces the entry, so Back still goes straight to Today.
- * One exception: Past days opened from the meals sheet adds its own entry,
- * so Back (or its close button) returns to the meals sheet.
+ * sends us back to Today. Moving from one screen to another (e.g. Review to
+ * Settings) replaces the entry, so Back still goes straight to Today.
+ * Showing the meals on Today is not a screen, so Back doesn't close them.
  *
  * Today's numbers: shown instantly from the phone's saved copy, then
  * refreshed quietly from the sheet (on open, when returning to Today, and
@@ -16,7 +15,11 @@
  * Swiping back through days: Today can show any of the last 7 days (swipe
  * right = one day back). Those days are preloaded while Today is open (see
  * past.ts), so a swipe shows them straight away. Coming back to the app
- * always shows today again.
+ * always shows today again, with the meals hidden.
+ *
+ * Editing a meal: Edit on a meal card opens Review filled with that meal.
+ * Save adds the edited meal under a new meal ID, then deletes the old one
+ * (so the Apps Script needs no "update" action).
  *
  * The camera: a hidden <input type="file" capture="environment"> opens the
  * Android camera (or the gallery). The photo is shrunk and handed to Review.
@@ -26,8 +29,6 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { TodayScreen } from './screens/Today';
 import { SettingsScreen } from './screens/Settings';
 import { ReviewScreen } from './screens/Review';
-import { MealsSheet } from './screens/MealsSheet';
-import { PastDaysScreen, type DeleteHandlers } from './screens/PastDays';
 import { Toast, type ToastData } from './components/Toast';
 import { hasSheet, loadSettings } from './settings';
 import { preparePhoto, type Photo } from './photo';
@@ -38,7 +39,7 @@ import { cachePast, loadCachedPast, PAST_DAYS, pastDates, pastIsStale, type Past
 import { cacheDay, emptyDay, loadCachedDay, withMeal, withoutMeal } from './day';
 import { addMeal, deleteMeal, errorMessage, getDay, SheetError, type DayResponse, type Meal, type Totals } from './sheet';
 
-type Screen = 'today' | 'settings' | 'review' | 'meals' | 'past';
+type Screen = 'today' | 'settings' | 'review';
 
 /** "yesterday" or "12 Nov" for a "2026-11-12" date. */
 function dayLabel(date: string): string {
@@ -49,7 +50,8 @@ function dayLabel(date: string): string {
   return new Date(yy, mm - 1, dd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-type ReviewState = { photo: Photo | null; photoError?: string; id: number };
+// What Review opens with: a photo, nothing (manual entry) or a saved meal to edit.
+type ReviewState = { photo: Photo | null; photoError?: string; edit?: Meal; id: number };
 
 export function App() {
   const [screen, setScreen] = useState<Screen>('today');
@@ -67,6 +69,7 @@ export function App() {
   const pastRef = useRef(past);
   const [offset, setOffset] = useState(0);
   const [slide, setSlide] = useState<'' | 'older' | 'newer'>(''); // direction of the last change
+  const [mealsOpen, setMealsOpen] = useState(false); // meal cards shown on Today (stay open while swiping)
 
   // Updates today's data on screen and in the phone's saved copy.
   function setDay(next: DayResponse) {
@@ -124,13 +127,13 @@ export function App() {
   useEffect(() => {
     // Start clean on Today, even if the address had a #screen in it.
     if (location.hash) history.replaceState(null, '', location.pathname);
-    // Back lands on the entry below: the meals sheet (if Past days was opened
-    // from it) or Today (no saved screen).
+    // Back lands on the entry below, which is always Today.
     const onBack = (e: PopStateEvent) => setScreen(e.state?.screen ?? 'today');
     const checkUpdate = async () => { if (await newVersionOnline()) setUpdateReady(true); };
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
-      setOffset(0); // coming back to the app always shows today
+      setOffset(0); // coming back to the app always shows today,
+      setMealsOpen(false); // with the meals hidden
       refresh();
       checkUpdate();
     };
@@ -149,8 +152,7 @@ export function App() {
 
   function open(next: Screen) {
     if (screen === next) return;
-    const stack = screen === 'today' || (screen === 'meals' && next === 'past');
-    if (stack) history.pushState({ screen: next }, '', `#${next}`);
+    if (screen === 'today') history.pushState({ screen: next }, '', `#${next}`);
     else history.replaceState({ screen: next }, '', `#${next}`);
     setScreen(next);
   }
@@ -177,10 +179,16 @@ export function App() {
     open('review');
   }
 
-  // "Add manually": Review without a photo.
+  // The + on Today, or "Add manually": Review without a photo.
   function openManual() {
     primeKeyboard(); // keyboard opens now, inside the tap (see keyboard.ts)
     setReview({ photo: null, id: review.id + 1 });
+    open('review');
+  }
+
+  // Edit on a meal card: Review filled with that meal (no photo).
+  function openEdit(meal: Meal) {
+    setReview({ photo: null, edit: meal, id: review.id + 1 });
     open('review');
   }
 
@@ -189,6 +197,7 @@ export function App() {
     const settings = loadSettings();
     if (!hasSheet(settings)) throw new SheetError('setup', 'Add the Apps Script URL and token in Settings.');
     await addMeal(settings, meal);
+    if (review.edit) return replaceMeal(review.edit, meal);
 
     navigator.vibrate?.(15); // one short haptic tick
     localChanges.current++;
@@ -199,6 +208,25 @@ export function App() {
       text: date === dayRef.current.date ? 'Saved' : `Saved to ${dayLabel(date)}`,
       undo: () => undoSave(meal),
     });
+    close(); // back to Today
+  }
+
+  /**
+   * Second half of saving an edited meal: the new copy is in the sheet, now
+   * delete the old one. Both days change if the date was changed. If the old
+   * copy can't be deleted, both copies show and the toast says so.
+   */
+  async function replaceMeal(old: Meal, meal: Meal) {
+    navigator.vibrate?.(15);
+    localChanges.current++;
+    changeDay(meal.timestamp.slice(0, 10), (d) => withMeal(d, meal));
+    try {
+      await deleteMeal(loadSettings(), old.id);
+      changeDay(old.timestamp.slice(0, 10), (d) => withoutMeal(d, old.id));
+      setToast({ id: Date.now(), text: 'Meal updated' });
+    } catch (err) {
+      setToast({ id: Date.now(), text: `Saved, but the old copy is still there: delete it. ${errorMessage(err)}` });
+    }
     close(); // back to Today
   }
 
@@ -217,17 +245,20 @@ export function App() {
   }
 
   /**
-   * "Delete meal" (in Today's meals or Past days): removes the meal from the
-   * screen at once, deletes it in the sheet, and offers Undo for 5 s, which
-   * saves it again. `handlers` update the screen the meal was deleted from.
+   * "Delete meal" on a meal card (today or a past day): removes the meal from
+   * the screen at once, deletes it in the sheet, and offers Undo for 5 s,
+   * which saves it again.
    */
-  async function deleteWithUndo(meal: Meal, handlers: DeleteHandlers) {
+  async function deleteDayMeal(meal: Meal) {
+    const date = meal.timestamp.slice(0, 10);
+    const remove = () => changeDay(date, (d) => withoutMeal(d, meal.id));
+    const restore = () => changeDay(date, (d) => withMeal(d, meal));
     localChanges.current++;
-    handlers.remove();
+    remove();
     try {
       await deleteMeal(loadSettings(), meal.id);
     } catch (err) {
-      handlers.restore(); // still in the sheet, so show it again
+      restore(); // still in the sheet, so show it again
       setToast({ id: Date.now(), text: `Couldn't delete. ${errorMessage(err)}` });
       return;
     }
@@ -237,34 +268,16 @@ export function App() {
       text: 'Meal deleted',
       undo: async () => {
         localChanges.current++;
-        handlers.restore();
+        restore();
         try {
           await addMeal(loadSettings(), meal);
         } catch (err) {
-          handlers.remove();
+          remove();
           setToast({ id: Date.now(), text: `Couldn't undo. ${errorMessage(err)}` });
         }
       },
     });
   }
-
-  // Delete from the meals sheet (today or a past day): numbers change straight away.
-  const deleteDayMeal = (meal: Meal) => {
-    const date = meal.timestamp.slice(0, 10);
-    deleteWithUndo(meal, {
-      remove: () => changeDay(date, (d) => withoutMeal(d, meal.id)),
-      restore: () => changeDay(date, (d) => withMeal(d, meal)),
-    });
-  };
-
-  // Delete from the Past days list: update that list and the swipe days.
-  const deletePastListMeal = (meal: Meal, list: DeleteHandlers) => {
-    const date = meal.timestamp.slice(0, 10);
-    deleteWithUndo(meal, {
-      remove: () => { list.remove(); changeDay(date, (d) => withoutMeal(d, meal.id)); },
-      restore: () => { list.restore(); changeDay(date, (d) => withMeal(d, meal)); },
-    });
-  };
 
   // New goals saved in Settings: show them on Today (and past days) straight away.
   function goalsSaved(goals: Totals) {
@@ -293,7 +306,7 @@ export function App() {
     <>
       <input ref={fileInput} type="file" accept="image/*" capture="environment" hidden onChange={onPhoto} />
 
-      {(screen === 'today' || screen === 'meals') && (
+      {screen === 'today' && (
         <TodayScreen
           day={shownDay}
           isToday={offset === 0}
@@ -302,23 +315,16 @@ export function App() {
           connected={hasSheet(settings)}
           syncError={syncError}
           onOpenSettings={() => open('settings')}
-          onOpenMeals={() => open('meals')}
+          mealsOpen={mealsOpen}
+          onToggleMeals={() => setMealsOpen((o) => !o)}
+          onEditMeal={openEdit}
+          onDeleteMeal={deleteDayMeal}
           onCamera={openCamera}
+          onManual={openManual}
           onSwipe={swipe}
           onToday={() => { setSlide('newer'); setOffset(0); }}
         />
       )}
-      {screen === 'meals' && (
-        <MealsSheet
-          day={shownDay}
-          isToday={offset === 0}
-          onClose={close}
-          onAddManually={openManual}
-          onPastDays={() => open('past')}
-          onDelete={deleteDayMeal}
-        />
-      )}
-      {screen === 'past' && <PastDaysScreen onClose={close} onDelete={deletePastListMeal} />}
       {screen === 'settings' && <SettingsScreen onClose={close} onGoalsSaved={goalsSaved} />}
       {screen === 'review' && (
         <ReviewScreen
@@ -326,6 +332,7 @@ export function App() {
           settings={settings}
           photo={review.photo}
           photoError={review.photoError}
+          edit={review.edit}
           onCancel={close}
           onRetake={openCamera}
           onOpenSettings={() => open('settings')}
