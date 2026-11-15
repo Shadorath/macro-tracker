@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
+    "build:test": "npm run build && copy scripts\\preview-stubs.js dist\\preview-stubs.js",
     "preview": "vite preview --host",
-    "icons": "powershell -ExecutionPolicy Bypass -File scripts/make-icons.ps1"
+    "icons": "powershell -ExecutionPolicy Bypass -File scripts/make-icons.ps1",
+    "ship": "powershell -ExecutionPolicy Bypass -File scripts/publish.ps1"
   },
   "dependencies": {
     "preact": "^11.2.0"

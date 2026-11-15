@@ -13,8 +13,11 @@ No keys or tokens live in this repository. The Gemini API key, Apps Script URL a
 ```bash
 npm install
 npm run dev      # local dev server
-npm run build    # type-check and build into dist/
-npm run icons    # redraw icon-192/512.png from public/icons/icon.svg (uses Edge)
+npm run build        # type-check and build into dist/
+npm run build:test   # build + copy the test helpers (scripts/preview-stubs.js) into dist/
+npm run preview      # serve the built app locally
+npm run ship -- -Message "What changed"   # build, secret check, commit, push, wait for the deploy
+npm run icons        # redraw icon-192/512.png from public/icons/icon.svg (uses Edge)
 ```
 
-Pushing to `main` builds and deploys to GitHub Pages (`.github/workflows/deploy.yml`).
+Pushing to `main` builds and deploys to GitHub Pages (`.github/workflows/deploy.yml`). The test helpers fake the sheet and Gemini in the local preview only; they are never part of the published app.
