@@ -28,14 +28,14 @@ Flow: Today screen → Take photo → Gemini estimates → Review and adjust →
 
 | Screen | What it shows | Main actions |
 | --- | --- | --- |
-| Today | Calories card (kcal eaten, "X kcal left of GOAL", ring with %, "Today's meals ›" row), Nutrients card (three coloured bars) and, once opened, the day's meal cards below them | Camera button (bottom centre); faint + for manual entry (bottom right); tap the calories card to show or hide the meals; Settings (quiet text, top right); swipe right / left to see earlier days |
+| Today | Calories card (kcal eaten, "X kcal left of GOAL", ring with %), Nutrients card (three coloured bars), the "Today's meals" line and, once opened, the day's meal cards under it | Camera button (bottom centre); faint + for manual entry (bottom right); tap the meals line to show or hide the meals; Settings (quiet text, top right); swipe right / left to see earlier days |
 | Capture | Android camera via the file input | Take photo or pick from gallery |
 | Review | Photo thumbnail, meal type and time, meal name, items with grams and macros, low-confidence items marked "check", Gemini's note, meal total | − / + on grams, tap grams for ½× / 1½× / 2× or typing; tap a name to rename or delete; tap the type or the time to change it; Add food; Re-check with a note; Save, Cancel |
 | Settings | Daily goals first (four fields + the kcal and % helper), then Connection (API key, Apps Script URL, token, Test connection), Theme, and the model under Advanced | Test connection, Save (the theme switches at once, without Save) |
 
 **Navigation:** no bottom bar, no pop-ups. Today is home; every other screen is one tap away and Back returns to Today: Settings (top-right text) and Review (camera button, the + or a meal's Edit). Showing the meals is not a separate screen, so Back does not close them.
 
-**Meals on Today:** tapping the calories card shows that day's meals as cards under the Nutrients card, newest first; the row's › turns to ˅. Tapping the calories card again hides them. Today opens with the meals hidden, so it still answers "how much is left?" at a glance; the camera button floats above the cards when the page scrolls. With no meals the space under Nutrients shows "No meals yet" as a hint. Tapping a meal card opens it to show two quiet text buttons, **Edit** and **Delete meal** (one card open at a time; tap it again to close). Delete works as before, with Undo.
+**Meals on Today:** under the Nutrients card sits the meals line, "Today's meals 4 ˅" ("Meals 3 ˅" on a past day). Tapping it shows that day's meals as cards right under it, newest first, and the ˅ turns to ˄; tapping it again hides them. Today opens with the meals hidden, so it still answers "how much is left?" at a glance; the camera button floats above the cards when the page scrolls. With no meals, opening the line shows "No meals yet" as a hint. Tapping a meal card opens it to show two quiet text buttons, **Edit** and **Delete meal** (one card open at a time; tap it again to close). Delete works as before, with Undo.
 
 **Swiping days on Today:** swipe right = one day back (up to 7 days), left = forward. A past day looks the same, with its date at the top, "Today ›" in place of Settings, and no camera button or +. Its meals show and work the same way (Edit and Delete included), and if the meals are open they stay open while I swipe, so I can flip through days. The 7 days are preloaded while Today is open and kept on the phone, so a swipe never waits. Coming back to the app always shows today, with the meals hidden.
 
@@ -78,8 +78,8 @@ Every screen and feature has to pass three tests: is it minimal, is it clear, is
 | Log a meal from a photo, no corrections | 3 taps: camera, shutter, Save |
 | Fix one portion before saving | +2 taps: tap grams, pick ½× / 1½× / 2× |
 | Log a meal by hand | 1 tap to open: the + (then fill in the Add food form) |
-| See today's meals | 1 tap: the calories card |
-| Edit or delete a meal | 3 taps: the calories card, the meal, Edit / Delete meal |
+| See today's meals | 1 tap: the meals line |
+| Edit or delete a meal | 3 taps: the meals line, the meal, Edit / Delete meal |
 | See yesterday | 1 swipe |
 | Change a goal | 3 taps: Settings, the goal field, Save |
 
@@ -122,9 +122,10 @@ Two themes, chosen in Settings → Theme and remembered on the phone. Each follo
 
 **Components (the whole kit)**
 
-- Calories card: "Calories" label, the big number = kcal **eaten** + "eaten", "680 kcal left of 2200" under it, a 104 px ring on the right (% in the centre), and a "Today's meals 3 ›" row at the bottom ("Meals 3 ›" on a past day; ˅ instead of › while the meals show). The whole card is one tap target that shows or hides the meals. Past the goal the number and the line turn orange-red, the line reads "120 kcal over 2200" and the ring is full.
+- Calories card: "Calories" label, the big number = kcal **eaten** + "eaten", "680 kcal left of 2200" under it, a 104 px ring on the right (% in the centre). It shows numbers only and does nothing when tapped. Past the goal the number and the line turn orange-red, the line reads "120 kcal over 2200" and the ring is full.
 - Macro row: coloured dot + label, "112 g / 150 g" right-aligned with the eaten value bold, 8 px bar in the macro's colour.
-- Meal card (on Today, below Nutrients, 8 px apart): a smaller card in the same style as the Nutrients card (same background, edge and 20 px corners, 16 px padding). Top line: "Lunch · 12:35" as a label on the left, "530 kcal" on the right. Then the meal name (body size). Then one row of three small bars side by side (Protein, Carbs, Fat, as on the Nutrients card), each with a "P 51 g" hint above a 6 px bar in the macro's colour. Each bar shows that meal's grams against the **day's goal** (for example 51 g of a 150 g protein goal fills a third), so I can see how big a piece of the day the meal was. No orange-red warning on meal bars. The whole card is one tap target; open, it adds a hairline and the quiet "Edit" and "Delete meal" text buttons.
+- Meals line (on Today, under Nutrients): a slim card, 56 px tall, "Today's meals" (medium weight) on the left, the meal count and ˅ (˄ while open) in the secondary colour on the right. The whole line is one tap target that shows or hides the meal cards under it.
+- Meal card (on Today, under the meals line, 8 px apart): a smaller card in the same style as the Nutrients card (same background, edge and 20 px corners, 16 px padding). Top line: "Lunch · 12:35" as a label on the left, "530 kcal" on the right. Then the meal name (body size). Then one row of three small bars side by side (Protein, Carbs, Fat, as on the Nutrients card), each with a "P 51 g" hint above a 6 px bar in the macro's colour. Each bar shows that meal's grams against the **day's goal** (for example 51 g of a 150 g protein goal fills a third), so I can see how big a piece of the day the meal was. No orange-red warning on meal bars. The whole card is one tap target; open, it adds a hairline and the quiet "Edit" and "Delete meal" text buttons.
 - Plus button: a 48 px tap target at the bottom right of Today, level with the camera button, today only. It is a thin outline +, the size of the camera icon, drawn in the faint track colour so it is barely seen. It opens manual entry.
 - Item row (Review): food name, grams with − / +, kcal and P / F / C in small text, "check" marker when low confidence.
 - Primary button (full width, bottom), small solid button (Add), quiet text button, chips, camera button (round).
@@ -275,7 +276,7 @@ A small static web app built with Vite and TypeScript, hosted free on GitHub Pag
 
 Version 1 was built in six milestones (sheet and script; app shell and Settings; photo → Gemini → Review; Save and Today; goals, Past days and manual entry; polish) and approved on Nov 15, 2026. Added since: swiping through the last 7 days on Today.
 
-**In progress (spec written, not built yet):** the meals show as cards on Today instead of in a pop-up sheet, with small P / C / F bars, Edit and Delete; a faint + for manual entry; the meals sheet and the Past days screen are removed. Until it is built, the live app still works the old way. Remove this paragraph in the commit that ships it.
+**In progress (spec written, not built yet):** the meals show as cards on Today under their own "Today's meals" line (moved out of the calories card) instead of in a pop-up sheet, with small P / C / F bars, Edit and Delete; a faint + for manual entry; the meals sheet and the Past days screen are removed. Until it is built, the live app still works the old way. Remove this paragraph in the commit that ships it.
 
 ## Out of scope and future ideas
 
