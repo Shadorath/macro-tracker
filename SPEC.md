@@ -28,16 +28,16 @@ Flow: Today screen → Take photo → Gemini estimates → Review and adjust →
 
 | Screen | What it shows | Main actions |
 | --- | --- | --- |
-| Today | Calories card (kcal eaten, "X kcal left of GOAL", ring with %, "Today's meals ›" row) and Nutrients card (three coloured bars); nothing else | Camera button (bottom centre); tap the calories card to open the meals sheet; Settings (quiet text, top right); swipe right / left to see earlier days |
+| Today | Calories card (kcal eaten, "X kcal left of GOAL", ring with %, "Today's meals ›" row), Nutrients card (three coloured bars) and, once opened, the day's meal cards below them | Camera button (bottom centre); faint + for manual entry (bottom right); tap the calories card to show or hide the meals; Settings (quiet text, top right); swipe right / left to see earlier days |
 | Capture | Android camera via the file input | Take photo or pick from gallery |
 | Review | Photo thumbnail, meal type and time, meal name, items with grams and macros, low-confidence items marked "check", Gemini's note, meal total | − / + on grams, tap grams for ½× / 1½× / 2× or typing; tap a name to rename or delete; tap the type or the time to change it; Add food; Re-check with a note; Save, Cancel |
-| Meals (sheet) | Slides up over Today: that day's meals with type, time and kcal; tap one to see its foods with grams, kcal and P / F / C | Delete meal (with Undo); on today's sheet also Add manually; Past days |
-| Past days | The last 7 days before today, newest first, kcal and P / F / C against goals | Tap a day to see its meals and delete one |
 | Settings | Daily goals first (four fields + the kcal and % helper), then Connection (API key, Apps Script URL, token, Test connection), Theme, and the model under Advanced | Test connection, Save (the theme switches at once, without Save) |
 
-**Navigation:** no bottom bar. Today is home; every other screen is one tap away and Back returns to Today: the meals sheet (tap the calories card), Settings (top-right text) and Review (camera button). One exception: Past days is opened from the meals sheet, and Back from it returns to that sheet.
+**Navigation:** no bottom bar, no pop-ups. Today is home; every other screen is one tap away and Back returns to Today: Settings (top-right text) and Review (camera button, the + or a meal's Edit). Showing the meals is not a separate screen, so Back does not close them.
 
-**Swiping days on Today:** swipe right = one day back (up to 7 days), left = forward. A past day looks the same, with its date at the top, "Today ›" in place of Settings, no camera button, and no "Add manually" in its meals sheet. The 7 days are preloaded while Today is open and kept on the phone, so a swipe never waits. Coming back to the app always shows today.
+**Meals on Today:** tapping the calories card shows that day's meals as cards under the Nutrients card, newest first; the row's › turns to ˅. Tapping the calories card again hides them. Today opens with the meals hidden, so it still answers "how much is left?" at a glance; the camera button floats above the cards when the page scrolls. With no meals the space under Nutrients shows "No meals yet" as a hint. Tapping a meal card opens it to show two quiet text buttons, **Edit** and **Delete meal** (one card open at a time; tap it again to close). Delete works as before, with Undo.
+
+**Swiping days on Today:** swipe right = one day back (up to 7 days), left = forward. A past day looks the same, with its date at the top, "Today ›" in place of Settings, and no camera button or +. Its meals show and work the same way (Edit and Delete included), and if the meals are open they stay open while I swipe, so I can flip through days. The 7 days are preloaded while Today is open and kept on the phone, so a swipe never waits. Coming back to the app always shows today, with the meals hidden.
 
 **Review details**
 
@@ -45,7 +45,8 @@ Flow: Today screen → Take photo → Gemini estimates → Review and adjust →
 - Meal type is guessed from the time and size: 05:00–10:30 Breakfast, 11:30–14:30 Lunch, 17:30–21:30 Dinner, otherwise Snack; at lunch and dinner time a meal under 250 kcal is a Snack. The guess follows the foods and the time until I pick a type myself.
 - Until I name a meal, it shows its first food's name in grey and is saved under that name.
 - "+ Add food" opens a form (food, grams, kcal, protein, fat, carbs). **Estimate** asks Gemini for the numbers from the name (and grams, if given); changing the grams afterwards rescales them until I type a number myself. ½× / 1½× / 2× chips multiply the grams and every filled number. Add needs a name, grams and kcal.
-- Manual entry ("Add manually" in today's meals sheet) is this same screen without a photo, starting with the Add food form open.
+- Manual entry (the + at the bottom right of Today) is this same screen without a photo, starting with the Add food form open.
+- **Editing a meal** (Edit on a meal card) opens this same screen filled with the saved meal: its type, time, name and foods, but no photo (photos aren't stored), so there is no thumbnail and no "Re-check with a note". The title reads "Edit meal". Save replaces the meal: the app saves the edited meal under a new meal ID, then deletes the old one, so no Apps Script change is needed. It keeps each food's source, confidence and the note. Toast: "Meal updated". If removing the old copy fails, both copies show, and the error line says to delete the old one. Cancel leaves the meal as it was.
 - When Save is off, one line above it says why.
 
 ## UX pillars
@@ -65,7 +66,7 @@ Every screen and feature has to pass three tests: is it minimal, is it clear, is
 - The Today screen answers one question in under 2 seconds: "how much can I still eat today?"
 - Big numbers for what matters, small labels for context.
 - Every number has its unit (g, kcal); no abbreviations beyond P / F / C after the first full label.
-- Plain words on buttons: "Save", "Retake", "Add food"; no icons without a label, except the camera button.
+- Plain words on buttons: "Save", "Retake", "Add food"; no icons without a label, except the camera button and the + for manual entry.
 - Estimates look like estimates: low-confidence items show a small "check" marker, never a pop-up.
 - Errors say what happened and what to do, in one line ("No internet. Your photo is kept." + Retry).
 
@@ -76,14 +77,16 @@ Every screen and feature has to pass three tests: is it minimal, is it clear, is
 | Open app → see what's left today | 0 taps |
 | Log a meal from a photo, no corrections | 3 taps: camera, shutter, Save |
 | Fix one portion before saving | +2 taps: tap grams, pick ½× / 1½× / 2× |
+| Log a meal by hand | 1 tap to open: the + (then fill in the Add food form) |
 | See today's meals | 1 tap: the calories card |
+| Edit or delete a meal | 3 taps: the calories card, the meal, Edit / Delete meal |
 | See yesterday | 1 swipe |
 | Change a goal | 3 taps: Settings, the goal field, Save |
 
 - The camera button sits bottom centre, reachable with the right thumb; all main actions live in the bottom half of the screen.
 - Grams are nudged with − / + (10 g per tap); tapping the grams value opens quick chips (½×, 1½×, 2×) and a number field, so any portion is 2 taps.
 - The app opens straight to Today with cached data shown instantly, then refreshes quietly in the background (on open, on returning to Today, and when the app comes back to the front).
-- While Gemini analyses, show the photo with a calm progress line, not a blocking spinner; Cancel is always available. Past days uses the same line while loading.
+- While Gemini analyses, show the photo with a calm progress line, not a blocking spinner; Cancel is always available.
 - After Save: one short haptic tick and a brief "Saved" toast, then straight back to Today. No confirmation dialogs, but Undo in the toast for 5 seconds. Delete meal works the same way ("Meal deleted" + Undo).
 
 ## Visual style
@@ -112,17 +115,17 @@ Two themes, chosen in Settings → Theme and remembered on the phone. Each follo
 | Touch targets | At least 48 × 48 px; camera button 72 px circle |
 | Shapes | Cards 20 px corners, buttons 12 px; progress bars 8 px tall, ring 9 px stroke, both with rounded ends |
 | Lines | Flat cards, no shadows; hairline dividers inside cards |
-| Icons | Outline style; the camera button is the only icon in the app |
+| Icons | Outline style; the camera button and the + are the only icons in the app |
 | Motion | Max 150 ms, only for bars filling, screen changes and the day sliding in; respects "reduce motion" |
 | Feedback | Haptic tick on Save, Delete and stepper taps; toasts at the bottom, 3 s (5 s when they offer Undo) |
 | App icon | A 70 % neon-pink ring with three macro bars (purple, yellow, cyan) on #0A0614: `public/icons/icon.svg`. The manifest colours are #0A0614 too, because Android paints its bottom navigation strip with them |
 
 **Components (the whole kit)**
 
-- Calories card: "Calories" label, the big number = kcal **eaten** + "eaten", "680 kcal left of 2200" under it, a 104 px ring on the right (% in the centre), and a "Today's meals 3 ›" row at the bottom. The whole card is one tap target that opens the meals sheet. Past the goal the number and the line turn orange-red, the line reads "120 kcal over 2200" and the ring is full.
+- Calories card: "Calories" label, the big number = kcal **eaten** + "eaten", "680 kcal left of 2200" under it, a 104 px ring on the right (% in the centre), and a "Today's meals 3 ›" row at the bottom ("Meals 3 ›" on a past day; ˅ instead of › while the meals show). The whole card is one tap target that shows or hides the meals. Past the goal the number and the line turn orange-red, the line reads "120 kcal over 2200" and the ring is full.
 - Macro row: coloured dot + label, "112 g / 150 g" right-aligned with the eaten value bold, 8 px bar in the macro's colour.
-- Sheet: slides up from the bottom over Today, closes with a swipe down, a tap outside or Back.
-- Meal row (in the sheet and Past days): meal type and time, meal name, kcal on the right; tap to expand its foods and "Delete meal".
+- Meal card (on Today, below Nutrients, 8 px apart): a smaller card in the same style as the Nutrients card (same background, edge and 20 px corners, 16 px padding). Top line: "Lunch · 12:35" as a label on the left, "530 kcal" on the right. Then the meal name (body size). Then one row of three small bars side by side (Protein, Carbs, Fat, as on the Nutrients card), each with a "P 51 g" hint above a 6 px bar in the macro's colour. Each bar shows that meal's grams against the **day's goal** (for example 51 g of a 150 g protein goal fills a third), so I can see how big a piece of the day the meal was. No orange-red warning on meal bars. The whole card is one tap target; open, it adds a hairline and the quiet "Edit" and "Delete meal" text buttons.
+- Plus button: a 48 px tap target at the bottom right of Today, level with the camera button, today only. It is a thin outline +, the size of the camera icon, drawn in the faint track colour so it is barely seen. It opens manual entry.
 - Item row (Review): food name, grams with − / +, kcal and P / F / C in small text, "check" marker when low confidence.
 - Primary button (full width, bottom), small solid button (Add), quiet text button, chips, camera button (round).
 - Toast and inline error line.
@@ -228,7 +231,7 @@ A small Google Apps Script bound to the spreadsheet, deployed as a web app, is t
 | --- | --- | --- |
 | `addMeal` | meal fields + list of items | `ok`, meal ID (saving the same meal ID twice changes nothing) |
 | `getDay` | date | that day's meals with items, totals, goals |
-| `getRange` | from date, to date | daily totals (newest first) and goals, for Past days |
+| `getRange` | from date, to date | daily totals (newest first) and goals. No longer used by the app since the Past days screen was removed; kept in the script so it needn't be redeployed |
 | `setGoals` | kcal, protein, fat, carbs | `ok`, the goals |
 | `deleteMeal` | meal ID | `ok` (removes its rows) |
 
@@ -271,6 +274,8 @@ A small static web app built with Vite and TypeScript, hosted free on GitHub Pag
 ## Status
 
 Version 1 was built in six milestones (sheet and script; app shell and Settings; photo → Gemini → Review; Save and Today; goals, Past days and manual entry; polish) and approved on Nov 15, 2026. Added since: swiping through the last 7 days on Today.
+
+**In progress (spec written, not built yet):** the meals show as cards on Today instead of in a pop-up sheet, with small P / C / F bars, Edit and Delete; a faint + for manual entry; the meals sheet and the Past days screen are removed. Until it is built, the live app still works the old way. Remove this paragraph in the commit that ships it.
 
 ## Out of scope and future ideas
 
