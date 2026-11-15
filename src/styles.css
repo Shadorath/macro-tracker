@@ -251,6 +251,14 @@ details .field { margin-bottom: 8px; }
   justify-content: center;
 }
 
+/* ---------- Today: swiping between days ---------- */
+.day-cards { display: flex; flex-direction: column; gap: 16px; }
+.day-cards.slide-older { animation: from-left 150ms ease-out; }  /* an earlier day comes in from the left */
+.day-cards.slide-newer { animation: from-right 150ms ease-out; }
+@keyframes from-left { from { transform: translateX(-24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes from-right { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.topbar .to-today { color: var(--accent); font-weight: 500; }
+
 /* ---------- Today: calories card (sizes from design/today-concept.html) ---------- */
 .calories { padding: 24px 20px 0; gap: 0; width: 100%; }
 .cal-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }

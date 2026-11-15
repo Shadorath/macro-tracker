@@ -13,6 +13,11 @@
  * refreshed quietly from the sheet (on open, when returning to Today, and
  * when the app comes back to the front).
  *
+ * Swiping back through days: Today can show any of the last 7 days (swipe
+ * right = one day back). Those days are preloaded while Today is open (see
+ * past.ts), so a swipe shows them straight away. Coming back to the app
+ * always shows today again.
+ *
  * The camera: a hidden <input type="file" capture="environment"> opens the
  * Android camera (or the gallery). The photo is shrunk and handed to Review.
  */
@@ -29,6 +34,7 @@ import { preparePhoto, type Photo } from './photo';
 import { dateString } from './dates';
 import { newVersionOnline } from './update';
 import { primeKeyboard } from './keyboard';
+import { cachePast, loadCachedPast, PAST_DAYS, pastDates, pastIsStale, type PastDays } from './past';
 import { cacheDay, emptyDay, loadCachedDay, withMeal, withoutMeal } from './day';
 import { addMeal, deleteMeal, errorMessage, getDay, SheetError, type DayResponse, type Meal, type Totals } from './sheet';
 
@@ -56,6 +62,12 @@ export function App() {
   const dayRef = useRef(day);         // latest day, for code that runs later (Undo)
   const localChanges = useRef(0);     // bumps on every save/undo made on the phone
 
+  // Swiping back through days on Today: 0 = today, 1 = yesterday, ... 7.
+  const [past, setPastState] = useState<PastDays>(loadCachedPast);
+  const pastRef = useRef(past);
+  const [offset, setOffset] = useState(0);
+  const [slide, setSlide] = useState<'' | 'older' | 'newer'>(''); // direction of the last change
+
   // Updates today's data on screen and in the phone's saved copy.
   function setDay(next: DayResponse) {
     dayRef.current = next;
@@ -63,10 +75,39 @@ export function App() {
     cacheDay(next);
   }
 
-  // Quietly asks the sheet for today's data.
+  // Same for the past days.
+  function setPast(next: PastDays) {
+    pastRef.current = next;
+    setPastState(next);
+    cachePast(next);
+  }
+
+  /** Changes one day's data (today or a loaded past day), on screen and saved. */
+  function changeDay(date: string, change: (d: DayResponse) => DayResponse) {
+    if (date === dayRef.current.date) setDay(change(dayRef.current));
+    const saved = pastRef.current.days[date];
+    if (saved) setPast({ ...pastRef.current, days: { ...pastRef.current.days, [date]: change(saved) } });
+  }
+
+  // Preloads the last 7 days (all at once), so swiping back shows them
+  // straight away. Skipped if the saved copy is less than 10 minutes old.
+  async function refreshPast() {
+    const settings = loadSettings();
+    if (!hasSheet(settings) || !pastIsStale(pastRef.current)) return;
+    const changesAtStart = localChanges.current;
+    const results = await Promise.allSettled(pastDates().map((date) => getDay(settings, date)));
+    if (localChanges.current !== changesAtStart) return; // a save/delete happened meanwhile
+    const days = { ...pastRef.current.days };
+    results.forEach((r) => { if (r.status === 'fulfilled') days[r.value.date] = r.value; });
+    const allLoaded = results.every((r) => r.status === 'fulfilled');
+    setPast({ loadedAt: allLoaded ? Date.now() : pastRef.current.loadedAt, days });
+  }
+
+  // Quietly asks the sheet for today's data (and preloads the past days).
   async function refresh() {
     const settings = loadSettings();
     if (!hasSheet(settings)) return;
+    refreshPast();
     const today = dateString();
     if (dayRef.current.date !== today) setDay(emptyDay(today)); // it's a new day
     const changesAtStart = localChanges.current;
@@ -89,6 +130,7 @@ export function App() {
     const checkUpdate = async () => { if (await newVersionOnline()) setUpdateReady(true); };
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return;
+      setOffset(0); // coming back to the app always shows today
       refresh();
       checkUpdate();
     };
@@ -150,25 +192,26 @@ export function App() {
 
     navigator.vibrate?.(15); // one short haptic tick
     localChanges.current++;
-    const isToday = meal.timestamp.slice(0, 10) === dayRef.current.date;
-    if (isToday) setDay(withMeal(dayRef.current, meal));
+    const date = meal.timestamp.slice(0, 10);
+    changeDay(date, (d) => withMeal(d, meal)); // today, or a past day
     setToast({
       id: Date.now(),
-      text: isToday ? 'Saved' : `Saved to ${dayLabel(meal.timestamp.slice(0, 10))}`,
-      undo: () => undoSave(meal, isToday),
+      text: date === dayRef.current.date ? 'Saved' : `Saved to ${dayLabel(date)}`,
+      undo: () => undoSave(meal),
     });
     close(); // back to Today
   }
 
   // Undo in the toast: delete the meal again.
-  async function undoSave(meal: Meal, wasToday: boolean) {
+  async function undoSave(meal: Meal) {
     localChanges.current++;
-    if (wasToday) setDay(withoutMeal(dayRef.current, meal.id));
+    const date = meal.timestamp.slice(0, 10);
+    changeDay(date, (d) => withoutMeal(d, meal.id));
     try {
       await deleteMeal(loadSettings(), meal.id);
     } catch (err) {
       // Couldn't remove it from the sheet: put it back so the screen stays true.
-      if (wasToday) setDay(withMeal(dayRef.current, meal));
+      changeDay(date, (d) => withMeal(d, meal));
       setToast({ id: Date.now(), text: `Couldn't undo. ${errorMessage(err)}` });
     }
   }
@@ -205,17 +248,44 @@ export function App() {
     });
   }
 
-  // Delete from Today's meals: today's numbers change straight away.
-  const deleteTodayMeal = (meal: Meal) => deleteWithUndo(meal, {
-    remove: () => setDay(withoutMeal(dayRef.current, meal.id)),
-    restore: () => setDay(withMeal(dayRef.current, meal)),
-  });
+  // Delete from the meals sheet (today or a past day): numbers change straight away.
+  const deleteDayMeal = (meal: Meal) => {
+    const date = meal.timestamp.slice(0, 10);
+    deleteWithUndo(meal, {
+      remove: () => changeDay(date, (d) => withoutMeal(d, meal.id)),
+      restore: () => changeDay(date, (d) => withMeal(d, meal)),
+    });
+  };
 
-  // New goals saved in Settings: show them on Today straight away.
+  // Delete from the Past days list: update that list and the swipe days.
+  const deletePastListMeal = (meal: Meal, list: DeleteHandlers) => {
+    const date = meal.timestamp.slice(0, 10);
+    deleteWithUndo(meal, {
+      remove: () => { list.remove(); changeDay(date, (d) => withoutMeal(d, meal.id)); },
+      restore: () => { list.restore(); changeDay(date, (d) => withMeal(d, meal)); },
+    });
+  };
+
+  // New goals saved in Settings: show them on Today (and past days) straight away.
   function goalsSaved(goals: Totals) {
     localChanges.current++;
     setDay({ ...dayRef.current, goals });
+    const days = Object.fromEntries(Object.entries(pastRef.current.days).map(([date, d]) => [date, { ...d, goals }]));
+    setPast({ ...pastRef.current, days });
   }
+
+  // Swipe right = one day back, left = one day forward (today at most).
+  function swipe(daysBack: 1 | -1) {
+    const next = Math.min(PAST_DAYS, Math.max(0, offset + daysBack));
+    if (next === offset) return;
+    setSlide(daysBack > 0 ? 'older' : 'newer');
+    setOffset(next);
+  }
+
+  // The day Today shows: today, or a past day (from the preloaded copy).
+  const shownDate = offset === 0 ? day.date : pastDates()[offset - 1];
+  const shownDay = offset === 0 ? day : past.days[shownDate] ?? emptyDay(shownDate);
+  const shownLoaded = offset === 0 || Boolean(past.days[shownDate]);
 
   const settings = loadSettings();
 
@@ -225,24 +295,30 @@ export function App() {
 
       {(screen === 'today' || screen === 'meals') && (
         <TodayScreen
-          day={day}
+          day={shownDay}
+          isToday={offset === 0}
+          loading={!shownLoaded}
+          slide={slide}
           connected={hasSheet(settings)}
           syncError={syncError}
           onOpenSettings={() => open('settings')}
           onOpenMeals={() => open('meals')}
           onCamera={openCamera}
+          onSwipe={swipe}
+          onToday={() => { setSlide('newer'); setOffset(0); }}
         />
       )}
       {screen === 'meals' && (
         <MealsSheet
-          day={day}
+          day={shownDay}
+          isToday={offset === 0}
           onClose={close}
           onAddManually={openManual}
           onPastDays={() => open('past')}
-          onDelete={deleteTodayMeal}
+          onDelete={deleteDayMeal}
         />
       )}
-      {screen === 'past' && <PastDaysScreen onClose={close} onDelete={deleteWithUndo} />}
+      {screen === 'past' && <PastDaysScreen onClose={close} onDelete={deletePastListMeal} />}
       {screen === 'settings' && <SettingsScreen onClose={close} onGoalsSaved={goalsSaved} />}
       {screen === 'review' && (
         <ReviewScreen
