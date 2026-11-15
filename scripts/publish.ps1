@@ -24,7 +24,7 @@ npm run build | Select-Object -Last 1
 if ($LASTEXITCODE -ne 0) { Fail 'The build failed. Nothing was committed.' }
 
 # 2. Secret check on everything that would be committed
-git add -A
+git add -A 2>$null   # (hides git's harmless line-ending warnings)
 $staged = (git diff --cached) -join "`n"
 if (-not $staged) { Write-Host 'Nothing to publish: no changes.'; exit 0 }
 
